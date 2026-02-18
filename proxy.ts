@@ -21,6 +21,10 @@ export default clerkMiddleware(async (auth, req) => {
 
   const authResult = await auth();
 
+  if (!authResult.userId && pathname.startsWith("/dashboard")) {
+    return NextResponse.redirect(new URL("/sign-in", req.url));
+  }
+
   if (!authResult.userId && !isPublicRoute(req)) {
     return NextResponse.redirect(new URL("/", req.url));
   }
