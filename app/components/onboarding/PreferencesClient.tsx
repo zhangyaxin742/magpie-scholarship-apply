@@ -17,12 +17,23 @@ const ethnicityOptions = [
 
 export function PreferencesClient() {
   const router = useRouter();
+  const firstGenOptions: Array<{ label: string; value: PreferencesData['firstGen'] }> = [
+    { label: 'Yes', value: true },
+    { label: 'No', value: false },
+    { label: 'Prefer not to say', value: undefined }
+  ];
+  const incomeOptions: Array<{ label: string; value: PreferencesData['incomeRange'] }> = [
+    { value: 'under_30k', label: 'Under $30K' },
+    { value: '30k_60k', label: '$30K - $60K' },
+    { value: '60k_100k', label: '$60K - $100K' },
+    { value: 'over_100k', label: 'Over $100K' },
+    { value: undefined, label: 'Prefer not to say' }
+  ];
   const [form, setForm] = useState<PreferencesData>({
     firstGen: undefined,
     incomeRange: undefined,
     ethnicity: [],
-    gender: undefined,
-    genderOther: ''
+    gender: undefined
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -81,18 +92,18 @@ export function PreferencesClient() {
             <div className="space-y-3">
               <p className="text-sm font-semibold text-slate-700">First-generation college student?</p>
               <div className="flex flex-wrap gap-3">
-                {['yes', 'no', 'prefer_not'].map((value) => (
+                {firstGenOptions.map((option) => (
                   <button
-                    key={value}
+                    key={option.label}
                     type="button"
-                    onClick={() => setForm((prev) => ({ ...prev, firstGen: value as PreferencesData['firstGen'] }))}
+                    onClick={() => setForm((prev) => ({ ...prev, firstGen: option.value }))}
                     className={`rounded-full border px-4 py-2 text-xs font-semibold ${
-                      form.firstGen === value
+                      form.firstGen === option.value
                         ? 'border-blue-600 bg-blue-600 text-white'
                         : 'border-slate-200 text-slate-600'
                     }`}
                   >
-                    {value === 'prefer_not' ? 'Prefer not to say' : value.charAt(0).toUpperCase() + value.slice(1)}
+                    {option.label}
                   </button>
                 ))}
               </div>
@@ -101,17 +112,11 @@ export function PreferencesClient() {
             <div className="space-y-3">
               <p className="text-sm font-semibold text-slate-700">Household income range (optional)</p>
               <div className="grid gap-3 md:grid-cols-2">
-                {[
-                  { value: 'under_30k', label: 'Under $30K' },
-                  { value: '30_60k', label: '$30K - $60K' },
-                  { value: '60_100k', label: '$60K - $100K' },
-                  { value: 'over_100k', label: 'Over $100K' },
-                  { value: 'prefer_not', label: 'Prefer not to say' }
-                ].map((option) => (
+                {incomeOptions.map((option) => (
                   <button
-                    key={option.value}
+                    key={option.label}
                     type="button"
-                    onClick={() => setForm((prev) => ({ ...prev, incomeRange: option.value as PreferencesData['incomeRange'] }))}
+                    onClick={() => setForm((prev) => ({ ...prev, incomeRange: option.value }))}
                     className={`rounded-xl border px-4 py-3 text-left text-xs font-semibold ${
                       form.incomeRange === option.value
                         ? 'border-blue-600 bg-blue-50 text-blue-700'
@@ -144,7 +149,7 @@ export function PreferencesClient() {
             <div className="space-y-3">
               <p className="text-sm font-semibold text-slate-700">Gender (optional)</p>
               <div className="flex flex-wrap gap-3">
-                {['male', 'female', 'non_binary', 'prefer_not', 'self_describe'].map((value) => (
+                {['male', 'female', 'non_binary', 'prefer_not_to_say', 'other'].map((value) => (
                   <button
                     key={value}
                     type="button"
@@ -155,22 +160,14 @@ export function PreferencesClient() {
                         : 'border-slate-200 text-slate-600'
                     }`}
                   >
-                    {value === 'prefer_not'
+                    {value === 'prefer_not_to_say'
                       ? 'Prefer not to say'
-                      : value === 'self_describe'
-                        ? 'Prefer to self-describe'
-                        : value.replace('_', ' ').replace(/^\w/, (c) => c.toUpperCase())}
+                      : value === 'other'
+                        ? 'Other'
+                        : value.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase())}
                   </button>
                 ))}
               </div>
-              {form.gender === 'self_describe' ? (
-                <input
-                  value={form.genderOther ?? ''}
-                  onChange={(event) => setForm((prev) => ({ ...prev, genderOther: event.target.value }))}
-                  placeholder="Describe your gender"
-                  className="w-full rounded-xl border border-slate-200 px-4 py-2 text-sm"
-                />
-              ) : null}
             </div>
           </div>
 

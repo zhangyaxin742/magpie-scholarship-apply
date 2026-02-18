@@ -3,7 +3,7 @@
 import { useFormContext } from 'react-hook-form';
 import type { ManualOnboardingForm } from '@/lib/onboarding/schemas';
 
-const graduationYears = Array.from({ length: 12 }, (_, index) => 2024 + index);
+const graduationYears = Array.from({ length: 16 }, (_, index) => 2020 + index);
 
 export function AcademicInfoForm() {
   const {
@@ -71,23 +71,23 @@ export function AcademicInfoForm() {
         <label className="space-y-2 text-sm font-medium text-slate-700">
           SAT Score
           <input
-            {...register('academic.sat')}
+            {...register('academic.satScore')}
             className="w-full rounded-xl border border-slate-200 px-4 py-2 text-sm text-slate-900 focus:border-blue-600 focus:outline-none"
             placeholder="1450"
           />
-          {errors.academic?.sat ? (
-            <p className="text-xs text-red-600">{errors.academic.sat.message}</p>
+          {errors.academic?.satScore ? (
+            <p className="text-xs text-red-600">{errors.academic.satScore.message}</p>
           ) : null}
         </label>
         <label className="space-y-2 text-sm font-medium text-slate-700">
           ACT Score
           <input
-            {...register('academic.act')}
+            {...register('academic.actScore')}
             className="w-full rounded-xl border border-slate-200 px-4 py-2 text-sm text-slate-900 focus:border-blue-600 focus:outline-none"
             placeholder="32"
           />
-          {errors.academic?.act ? (
-            <p className="text-xs text-red-600">{errors.academic.act.message}</p>
+          {errors.academic?.actScore ? (
+            <p className="text-xs text-red-600">{errors.academic.actScore.message}</p>
           ) : null}
         </label>
       </div>

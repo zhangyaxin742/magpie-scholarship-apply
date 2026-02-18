@@ -8,6 +8,18 @@ import type { OnboardingData } from '@/lib/onboarding/types';
 import { emptyOnboardingData } from '@/lib/onboarding/defaults';
 
 const emptyData = JSON.parse(JSON.stringify(emptyOnboardingData)) as OnboardingData;
+const essayTopics: OnboardingData['essays'][number]['topic'][] = [
+  'personal_statement',
+  'leadership',
+  'challenge',
+  'community_service',
+  'diversity',
+  'career_goals',
+  'academic_interest',
+  'extracurricular',
+  'work_experience',
+  'other'
+];
 
 export function ConfirmClient() {
   const router = useRouter();
@@ -67,7 +79,13 @@ export function ConfirmClient() {
   const updateActivity = (index: number, field: keyof OnboardingData['activities'][number], value: string) => {
     setData((prev) => {
       const next = [...prev.activities];
-      const current = next[index] ?? { title: '', position: '', description: '', hoursPerWeek: 0, weeksPerYear: 0 };
+      const current = next[index] ?? {
+        title: '',
+        position: '',
+        descriptionLong: '',
+        hoursPerWeek: 0,
+        weeksPerYear: 0
+      };
       next[index] = {
         ...current,
         [field]: value
@@ -198,6 +216,12 @@ export function ConfirmClient() {
                   placeholder="Email"
                 />
                 <input
+                  value={data.personal.streetAddress}
+                  onChange={(event) => updatePersonal('streetAddress', event.target.value)}
+                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm md:col-span-2"
+                  placeholder="Street address"
+                />
+                <input
                   value={data.personal.city}
                   onChange={(event) => updatePersonal('city', event.target.value)}
                   className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
@@ -216,6 +240,7 @@ export function ConfirmClient() {
                   {data.personal.firstName} {data.personal.lastName}
                 </p>
                 <p>{data.personal.email}</p>
+                <p>{data.personal.streetAddress}</p>
                 <p>
                   {data.personal.city}, {data.personal.state} {data.personal.zip}
                 </p>
@@ -249,14 +274,14 @@ export function ConfirmClient() {
                   placeholder="GPA"
                 />
                 <input
-                  value={data.academic.sat || ''}
-                  onChange={(event) => updateAcademic('sat', event.target.value)}
+                  value={data.academic.satScore || ''}
+                  onChange={(event) => updateAcademic('satScore', event.target.value)}
                   className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
                   placeholder="SAT"
                 />
                 <input
-                  value={data.academic.act || ''}
-                  onChange={(event) => updateAcademic('act', event.target.value)}
+                  value={data.academic.actScore || ''}
+                  onChange={(event) => updateAcademic('actScore', event.target.value)}
                   className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
                   placeholder="ACT"
                 />
@@ -266,7 +291,8 @@ export function ConfirmClient() {
                 <p className="text-base font-semibold text-slate-900">{data.academic.highSchool}</p>
                 <p>Class of {data.academic.graduationYear}</p>
                 <p>
-                  GPA: {data.academic.gpa || '—'} | SAT: {data.academic.sat || '—'} | ACT: {data.academic.act || '—'}
+                  GPA: {data.academic.gpa || '—'} | SAT: {data.academic.satScore || '—'} | ACT:{' '}
+                  {data.academic.actScore || '—'}
                 </p>
               </>
             )}
@@ -294,8 +320,8 @@ export function ConfirmClient() {
                       placeholder="Position"
                     />
                     <textarea
-                      value={activity.description || ''}
-                      onChange={(event) => updateActivity(index, 'description', event.target.value)}
+                      value={activity.descriptionLong || ''}
+                      onChange={(event) => updateActivity(index, 'descriptionLong', event.target.value)}
                       className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
                       placeholder="Description"
                     />
@@ -326,12 +352,17 @@ export function ConfirmClient() {
               <div className="space-y-4">
                 {data.essays.map((essay, index) => (
                   <div key={`${essay.topic}-${index}`} className="space-y-2 rounded-xl border border-slate-200 p-4">
-                    <input
+                    <select
                       value={essay.topic}
                       onChange={(event) => updateEssay(index, 'topic', event.target.value)}
                       className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
-                      placeholder="Essay topic"
-                    />
+                    >
+                      {essayTopics.map((topic) => (
+                        <option key={topic} value={topic}>
+                          {topic.replace(/_/g, ' ')}
+                        </option>
+                      ))}
+                    </select>
                     <textarea
                       value={essay.text}
                       onChange={(event) => updateEssay(index, 'text', event.target.value)}

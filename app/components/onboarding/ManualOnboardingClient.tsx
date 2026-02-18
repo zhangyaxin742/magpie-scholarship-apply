@@ -18,7 +18,7 @@ const personalFields = [
   'personal.firstName',
   'personal.lastName',
   'personal.email',
-  'personal.address',
+  'personal.streetAddress',
   'personal.city',
   'personal.state'
 ] as const;
@@ -28,8 +28,8 @@ const academicFields = [
   'academic.graduationYear',
   'academic.gpa',
   'academic.weightedGpa',
-  'academic.sat',
-  'academic.act',
+  'academic.satScore',
+  'academic.actScore',
   'academic.classRank'
 ] as const;
 
@@ -173,6 +173,7 @@ export function ManualOnboardingClient() {
                     <p className="mt-2 text-sm text-slate-600">
                       {reviewSummary.personal.firstName} {reviewSummary.personal.lastName} · {reviewSummary.personal.email}
                     </p>
+                    <p className="text-sm text-slate-600">{reviewSummary.personal.streetAddress}</p>
                     <p className="text-sm text-slate-600">
                       {reviewSummary.personal.city}, {reviewSummary.personal.state}
                     </p>
@@ -184,8 +185,8 @@ export function ManualOnboardingClient() {
                       {reviewSummary.academic.highSchool} · Class of {reviewSummary.academic.graduationYear}
                     </p>
                     <p className="text-sm text-slate-600">
-                      GPA: {reviewSummary.academic.gpa || '—'} · SAT: {reviewSummary.academic.sat || '—'} · ACT:{' '}
-                      {reviewSummary.academic.act || '—'}
+                      GPA: {reviewSummary.academic.gpa || '—'} · SAT: {reviewSummary.academic.satScore || '—'} · ACT:{' '}
+                      {reviewSummary.academic.actScore || '—'}
                     </p>
                   </div>
 

@@ -20,7 +20,7 @@ export const personalInfoSchema = z.object({
   lastName: z.string().min(1, 'Last name is required').max(50),
   email: z.string().email('Enter a valid email address'),
   phone: z.string().optional(),
-  address: z.string().min(1, 'Address is required'),
+  streetAddress: z.string().min(1, 'Street address is required'),
   city: z.string().min(1, 'City is required'),
   state: z.string().length(2, 'State must be 2 letters'),
   zip: z.string().optional()
@@ -31,28 +31,43 @@ export const academicInfoSchema = z.object({
   graduationYear: z.coerce
     .number()
     .int()
-    .min(2024, 'Graduation year must be between 2024 and 2035')
-    .max(2035, 'Graduation year must be between 2024 and 2035'),
+    .min(2020, 'Graduation year must be between 2020 and 2035')
+    .max(2035, 'Graduation year must be between 2020 and 2035'),
   gpa: optionalNumberString(0, 5, 'GPA'),
   weightedGpa: optionalNumberString(0, 5, 'Weighted GPA'),
-  sat: optionalNumberString(400, 1600, 'SAT score'),
-  act: optionalNumberString(1, 36, 'ACT score'),
+  satScore: optionalNumberString(400, 1600, 'SAT score'),
+  actScore: optionalNumberString(1, 36, 'ACT score'),
   classRank: z.string().optional()
 });
 
 export const activitySchema = z.object({
   title: z.string().min(1, 'Activity title is required'),
   position: z.string().optional(),
-  description: z.string().optional(),
-  hoursPerWeek: z.coerce.number().min(0).max(40).optional(),
+  descriptionShort: z.string().max(50).optional(),
+  descriptionMedium: z.string().max(150).optional(),
+  descriptionLong: z.string().max(500).optional(),
+  hoursPerWeek: z.coerce.number().min(0).max(168).optional(),
   weeksPerYear: z.coerce.number().min(0).max(52).optional(),
-  grades: z.array(z.coerce.number().int()).optional()
+  grades: z.array(z.coerce.number().int().min(9).max(12)).max(4).optional()
 });
 
 export const essaySchema = z.object({
-  topic: z.string().min(1, 'Essay topic is required'),
+  topic: z.enum([
+    'personal_statement',
+    'leadership',
+    'challenge',
+    'community_service',
+    'diversity',
+    'career_goals',
+    'academic_interest',
+    'extracurricular',
+    'work_experience',
+    'other'
+  ]),
   text: z.string().min(1, 'Essay text is required'),
-  wordCount: z.number().optional()
+  title: z.string().optional(),
+  tags: z.array(z.string()).optional(),
+  wordCount: z.number().min(1).max(10000).optional()
 });
 
 export const onboardingDataSchema = z.object({
@@ -63,11 +78,10 @@ export const onboardingDataSchema = z.object({
 });
 
 export const preferencesSchema = z.object({
-  firstGen: z.enum(['yes', 'no', 'prefer_not']).optional(),
-  incomeRange: z.enum(['under_30k', '30_60k', '60_100k', 'over_100k', 'prefer_not']).optional(),
+  firstGen: z.boolean().optional(),
+  incomeRange: z.enum(['under_30k', '30k_60k', '60k_100k', 'over_100k']).optional(),
   ethnicity: z.array(z.string()).optional(),
-  gender: z.enum(['male', 'female', 'non_binary', 'prefer_not', 'self_describe']).optional(),
-  genderOther: z.string().optional()
+  gender: z.enum(['male', 'female', 'non_binary', 'prefer_not_to_say', 'other']).optional()
 });
 
 export const manualOnboardingSchema = z.object({

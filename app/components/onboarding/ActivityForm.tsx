@@ -64,11 +64,12 @@ export function ActivityForm() {
               </label>
 
               <label className="space-y-2 text-sm font-medium text-slate-700">
-                Description
+                Description (up to 500 characters)
                 <textarea
-                  {...register(`activities.${index}.description`)}
+                  {...register(`activities.${index}.descriptionLong`)}
                   className="h-24 w-full rounded-xl border border-slate-200 px-4 py-2 text-sm text-slate-900 focus:border-blue-600 focus:outline-none"
                   placeholder="What you did, impact, awards..."
+                  maxLength={500}
                 />
               </label>
 
@@ -78,7 +79,7 @@ export function ActivityForm() {
                   <input
                     type="number"
                     min={0}
-                    max={40}
+                    max={168}
                     {...register(`activities.${index}.hoursPerWeek`)}
                     className="w-full rounded-xl border border-slate-200 px-4 py-2 text-sm text-slate-900 focus:border-blue-600 focus:outline-none"
                     placeholder="4"
@@ -124,7 +125,7 @@ export function ActivityForm() {
           append({
             title: '',
             position: '',
-            description: '',
+            descriptionLong: '',
             hoursPerWeek: undefined,
             weeksPerYear: undefined,
             grades: []

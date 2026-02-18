@@ -22,7 +22,7 @@ export function parseCommonApp(text: string): ParseResult {
   data.personal.email = findMatch(text, /Email\s*[:\-]\s*([\w.%+-]+@[\w.-]+\.[A-Za-z]{2,})/i) ||
     findMatch(text, /([\w.%+-]+@[\w.-]+\.[A-Za-z]{2,})/i);
   data.personal.phone = findMatch(text, /Phone\s*[:\-]\s*([\d\-()+\s]{7,})/i);
-  data.personal.address = findMatch(text, /Address\s*[:\-]\s*(.+)/i);
+  data.personal.streetAddress = findMatch(text, /Address\s*[:\-]\s*(.+)/i);
 
   const cityStateZip = text.match(/([A-Za-z .]+),\s*([A-Z]{2})\s*(\d{5})?/);
   if (cityStateZip) {
@@ -36,8 +36,8 @@ export function parseCommonApp(text: string): ParseResult {
   data.academic.graduationYear = graduationYear ? Number(graduationYear.match(/\d{4}/)?.[0]) : data.academic.graduationYear;
   data.academic.gpa = findMatch(text, /GPA\s*[:\-]\s*([0-5]\.?\d{0,2})/i);
   data.academic.weightedGpa = findMatch(text, /Weighted GPA\s*[:\-]\s*([0-5]\.?\d{0,2})/i);
-  data.academic.sat = findMatch(text, /SAT\s*[:\-]\s*(\d{3,4})/i);
-  data.academic.act = findMatch(text, /ACT\s*[:\-]\s*(\d{1,2})/i);
+  data.academic.satScore = findMatch(text, /SAT\s*[:\-]\s*(\d{3,4})/i);
+  data.academic.actScore = findMatch(text, /ACT\s*[:\-]\s*(\d{1,2})/i);
   data.academic.classRank = findMatch(text, /Class Rank\s*[:\-]\s*([\d/]+)/i);
 
   if (!data.personal.firstName || !data.personal.lastName) {

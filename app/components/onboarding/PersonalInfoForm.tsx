@@ -58,14 +58,14 @@ export function PersonalInfoForm() {
       </label>
 
       <label className="space-y-2 text-sm font-medium text-slate-700">
-        Address *
+        Street Address *
         <input
-          {...register('personal.address')}
+          {...register('personal.streetAddress')}
           className="w-full rounded-xl border border-slate-200 px-4 py-2 text-sm text-slate-900 focus:border-blue-600 focus:outline-none"
           placeholder="123 Main St"
         />
-        {errors.personal?.address ? (
-          <p className="text-xs text-red-600">{errors.personal.address.message}</p>
+        {errors.personal?.streetAddress ? (
+          <p className="text-xs text-red-600">{errors.personal.streetAddress.message}</p>
         ) : null}
       </label>
 

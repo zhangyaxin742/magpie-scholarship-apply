@@ -7,8 +7,12 @@ const essayTopics = [
   'personal_statement',
   'leadership',
   'challenge',
-  'community',
-  'growth',
+  'community_service',
+  'diversity',
+  'career_goals',
+  'academic_interest',
+  'extracurricular',
+  'work_experience',
   'other'
 ];
 
@@ -55,7 +59,7 @@ export function EssayForm() {
                 >
                   {essayTopics.map((topic) => (
                     <option key={topic} value={topic}>
-                      {topic.replace('_', ' ')}
+                      {topic.replace(/_/g, ' ')}
                     </option>
                   ))}
                 </select>

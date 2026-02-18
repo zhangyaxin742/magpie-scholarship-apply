@@ -8,18 +8,18 @@ export const emptyOnboardingData: OnboardingData = {
     lastName: '',
     email: '',
     phone: '',
-    address: '',
+    streetAddress: '',
     city: '',
     state: '',
     zip: ''
   },
   academic: {
     highSchool: '',
-    graduationYear: currentYear < 2024 ? 2024 : currentYear,
+    graduationYear: currentYear < 2020 ? 2020 : currentYear,
     gpa: '',
     weightedGpa: '',
-    sat: '',
-    act: '',
+    satScore: '',
+    actScore: '',
     classRank: ''
   },
   activities: [],

@@ -3,7 +3,7 @@ export interface PersonalInfo {
   lastName: string;
   email: string;
   phone?: string;
-  address: string;
+  streetAddress: string;
   city: string;
   state: string;
   zip?: string;
@@ -14,23 +14,37 @@ export interface AcademicInfo {
   graduationYear: number;
   gpa?: string;
   weightedGpa?: string;
-  sat?: string;
-  act?: string;
+  satScore?: string;
+  actScore?: string;
   classRank?: string;
 }
 
 export interface Activity {
   title: string;
   position?: string;
-  description?: string;
+  descriptionShort?: string;
+  descriptionMedium?: string;
+  descriptionLong?: string;
   hoursPerWeek?: number;
   weeksPerYear?: number;
   grades?: number[];
 }
 
 export interface Essay {
-  topic: string;
+  topic:
+    | 'personal_statement'
+    | 'leadership'
+    | 'challenge'
+    | 'community_service'
+    | 'diversity'
+    | 'career_goals'
+    | 'academic_interest'
+    | 'extracurricular'
+    | 'work_experience'
+    | 'other';
   text: string;
+  title?: string;
+  tags?: string[];
   wordCount: number;
 }
 
@@ -48,9 +62,8 @@ export interface ParsedOnboardingPayload {
 }
 
 export interface PreferencesData {
-  firstGen?: 'yes' | 'no' | 'prefer_not';
-  incomeRange?: 'under_30k' | '30_60k' | '60_100k' | 'over_100k' | 'prefer_not';
+  firstGen?: boolean;
+  incomeRange?: 'under_30k' | '30k_60k' | '60k_100k' | 'over_100k';
   ethnicity?: string[];
-  gender?: 'male' | 'female' | 'non_binary' | 'prefer_not' | 'self_describe';
-  genderOther?: string;
+  gender?: 'male' | 'female' | 'non_binary' | 'prefer_not_to_say' | 'other';
 }
