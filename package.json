@@ -10,11 +10,13 @@
   },
   "dependencies": {
     "@clerk/nextjs": "^6.37.5",
+    "@supabase/supabase-js": "^2.96.0",
     "framer-motion": "^10.18.0",
     "lucide-react": "^0.294.0",
     "next": "^15.2.3",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "svix": "^1.85.0"
   },
   "devDependencies": {
     "@types/node": "^25.2.3",
