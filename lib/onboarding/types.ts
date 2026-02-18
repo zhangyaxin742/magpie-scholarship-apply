@@ -70,4 +70,5 @@ export interface PreferencesData {
   incomeRange?: 'under_30k' | '30k_60k' | '60k_100k' | 'over_100k';
   ethnicity?: string[];
   gender?: 'male' | 'female' | 'non_binary' | 'prefer_not_to_say' | 'other';
+  genderSelfDescribe?: string;
 }

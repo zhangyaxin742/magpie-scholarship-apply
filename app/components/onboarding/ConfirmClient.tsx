@@ -8,6 +8,14 @@ import type { ParsedOnboardingState } from '@/lib/onboarding/parsedStore';
 import type { OnboardingData } from '@/lib/onboarding/types';
 import { emptyOnboardingData } from '@/lib/onboarding/defaults';
 import { normalizeParsedData } from '@/lib/onboarding/normalizeParsed';
+import { usStates } from '@/lib/onboarding/usStates';
+import {
+  academicInfoSchema,
+  activitySchema,
+  essaySchema,
+  onboardingDataSchema,
+  personalInfoSchema
+} from '@/lib/onboarding/schemas';
 import { truncateAtWord } from '@/lib/parser/utils';
 
 const emptyData = JSON.parse(JSON.stringify(emptyOnboardingData)) as OnboardingData;
@@ -42,6 +50,12 @@ export function ConfirmClient() {
   });
   const [hydrated, setHydrated] = useState(false);
   const [expandedEssays, setExpandedEssays] = useState<number[]>([]);
+  const [validationErrors, setValidationErrors] = useState<{
+    personal?: Record<string, string>;
+    academic?: Record<string, string>;
+    activities?: Record<number, Record<string, string>>;
+    essays?: Record<number, Record<string, string>>;
+  }>({});
 
   useEffect(() => {
     setHydrated(true);
@@ -76,6 +90,12 @@ export function ConfirmClient() {
         [field]: value
       }
     }));
+    setValidationErrors((prev) => {
+      if (!prev.personal?.[field]) return prev;
+      const nextPersonal = { ...prev.personal };
+      delete nextPersonal[field];
+      return { ...prev, personal: nextPersonal };
+    });
   };
 
   const toggleEssay = (index: number) => {
@@ -108,6 +128,12 @@ export function ConfirmClient() {
         [field]: field === 'graduationYear' ? Number(value) : value
       }
     }));
+    setValidationErrors((prev) => {
+      if (!prev.academic?.[field]) return prev;
+      const nextAcademic = { ...prev.academic };
+      delete nextAcademic[field];
+      return { ...prev, academic: nextAcademic };
+    });
   };
 
   const updateActivity = (
@@ -130,6 +156,19 @@ export function ConfirmClient() {
       };
       return { ...prev, activities: next };
     });
+    setValidationErrors((prev) => {
+      const activityErrors = prev.activities?.[index];
+      if (!activityErrors?.[field]) return prev;
+      const nextActivities = { ...(prev.activities ?? {}) };
+      const nextActivity = { ...activityErrors };
+      delete nextActivity[field];
+      if (Object.keys(nextActivity).length) {
+        nextActivities[index] = nextActivity;
+      } else {
+        delete nextActivities[index];
+      }
+      return { ...prev, activities: nextActivities };
+    });
   };
 
   const updateEssay = (index: number, field: keyof OnboardingData['essays'][number], value: string) => {
@@ -142,11 +181,131 @@ export function ConfirmClient() {
       };
       return { ...prev, essays: next };
     });
+    setValidationErrors((prev) => {
+      const essayErrors = prev.essays?.[index];
+      if (!essayErrors?.[field]) return prev;
+      const nextEssays = { ...(prev.essays ?? {}) };
+      const nextEssay = { ...essayErrors };
+      delete nextEssay[field];
+      if (Object.keys(nextEssay).length) {
+        nextEssays[index] = nextEssay;
+      } else {
+        delete nextEssays[index];
+      }
+      return { ...prev, essays: nextEssays };
+    });
+  };
+
+  const normalizeFieldErrors = (fieldErrors: Record<string, string[] | undefined>) =>
+    Object.fromEntries(
+      Object.entries(fieldErrors)
+        .filter(([, messages]) => messages?.length)
+        .map(([field, messages]) => [field, messages?.[0] ?? 'Invalid value'])
+    );
+
+  const validatePersonalSection = () => {
+    const result = personalInfoSchema.safeParse(data.personal);
+    return result.success ? null : normalizeFieldErrors(result.error.flatten().fieldErrors);
+  };
+
+  const validateAcademicSection = () => {
+    const result = academicInfoSchema.safeParse(data.academic);
+    return result.success ? null : normalizeFieldErrors(result.error.flatten().fieldErrors);
+  };
+
+  const validateActivitiesSection = () => {
+    const next: Record<number, Record<string, string>> = {};
+    data.activities.forEach((activity, index) => {
+      const result = activitySchema.safeParse(activity);
+      if (!result.success) {
+        next[index] = normalizeFieldErrors(result.error.flatten().fieldErrors);
+      }
+    });
+    return Object.keys(next).length ? next : null;
+  };
+
+  const validateEssaysSection = () => {
+    const next: Record<number, Record<string, string>> = {};
+    data.essays.forEach((essay, index) => {
+      const result = essaySchema.safeParse(essay);
+      if (!result.success) {
+        next[index] = normalizeFieldErrors(result.error.flatten().fieldErrors);
+      }
+    });
+    return Object.keys(next).length ? next : null;
+  };
+
+  const handleSectionToggle = (section: keyof typeof editing) => {
+    if (!editing[section]) {
+      setEditing((prev) => ({ ...prev, [section]: true }));
+      return;
+    }
+
+    let nextErrors: typeof validationErrors = { ...validationErrors };
+    if (section === 'personal') {
+      const errors = validatePersonalSection();
+      if (errors) {
+        nextErrors.personal = errors;
+        setValidationErrors(nextErrors);
+        return;
+      }
+      delete nextErrors.personal;
+    }
+    if (section === 'academic') {
+      const errors = validateAcademicSection();
+      if (errors) {
+        nextErrors.academic = errors;
+        setValidationErrors(nextErrors);
+        return;
+      }
+      delete nextErrors.academic;
+    }
+    if (section === 'activities') {
+      const errors = validateActivitiesSection();
+      if (errors) {
+        nextErrors.activities = errors;
+        setValidationErrors(nextErrors);
+        return;
+      }
+      delete nextErrors.activities;
+    }
+    if (section === 'essays') {
+      const errors = validateEssaysSection();
+      if (errors) {
+        nextErrors.essays = errors;
+        setValidationErrors(nextErrors);
+        return;
+      }
+      delete nextErrors.essays;
+    }
+
+    setValidationErrors(nextErrors);
+    setEditing((prev) => ({ ...prev, [section]: false }));
   };
 
   const handleSubmit = async () => {
     setSaving(true);
     setSaveError(null);
+
+    const validation = onboardingDataSchema.safeParse(data);
+    if (!validation.success) {
+      const nextErrors: typeof validationErrors = {
+        personal: validatePersonalSection() ?? undefined,
+        academic: validateAcademicSection() ?? undefined,
+        activities: validateActivitiesSection() ?? undefined,
+        essays: validateEssaysSection() ?? undefined
+      };
+      setValidationErrors(nextErrors);
+      setEditing((prev) => ({
+        personal: !!nextErrors.personal || prev.personal,
+        academic: !!nextErrors.academic || prev.academic,
+        activities: !!nextErrors.activities || prev.activities,
+        essays: !!nextErrors.essays || prev.essays
+      }));
+      setSaveError('Please fix the highlighted fields before continuing.');
+      setSaving(false);
+      return;
+    }
 
     try {
       const essays = data.essays.map((essay) => ({
@@ -235,7 +394,7 @@ export function ConfirmClient() {
           <ConfirmationSection
             title="Personal info"
             actionLabel={editing.personal ? 'Save' : 'Edit'}
-            onAction={() => setEditing((prev) => ({ ...prev, personal: !prev.personal }))}
+            onAction={() => handleSectionToggle('personal')}
           >
             {editing.personal ? (
               <div className="grid gap-3 md:grid-cols-2">
@@ -245,18 +404,27 @@ export function ConfirmClient() {
                   className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
                   placeholder="First name"
                 />
+                {validationErrors.personal?.firstName ? (
+                  <p className="text-xs text-red-600 md:col-span-2">{validationErrors.personal.firstName}</p>
+                ) : null}
                 <input
                   value={data.personal.lastName}
                   onChange={(event) => updatePersonal('lastName', event.target.value)}
                   className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
                   placeholder="Last name"
                 />
+                {validationErrors.personal?.lastName ? (
+                  <p className="text-xs text-red-600 md:col-span-2">{validationErrors.personal.lastName}</p>
+                ) : null}
                 <input
                   value={data.personal.email}
                   onChange={(event) => updatePersonal('email', event.target.value)}
                   className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm md:col-span-2"
                   placeholder="Email"
                 />
+                {validationErrors.personal?.email ? (
+                  <p className="text-xs text-red-600 md:col-span-2">{validationErrors.personal.email}</p>
+                ) : null}
                 <input
                   value={data.personal.phone || ''}
                   onChange={(event) => updatePersonal('phone', event.target.value)}
@@ -269,18 +437,36 @@ export function ConfirmClient() {
                   className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm md:col-span-2"
                   placeholder="Street address"
                 />
+                {validationErrors.personal?.streetAddress ? (
+                  <p className="text-xs text-red-600 md:col-span-2">{validationErrors.personal.streetAddress}</p>
+                ) : null}
                 <input
                   value={data.personal.city}
                   onChange={(event) => updatePersonal('city', event.target.value)}
                   className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
                   placeholder="City"
                 />
-                <input
+                {validationErrors.personal?.city ? (
+                  <p className="text-xs text-red-600 md:col-span-2">{validationErrors.personal.city}</p>
+                ) : null}
+                <select
                   value={data.personal.state}
                   onChange={(event) => updatePersonal('state', event.target.value)}
                   className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
-                  placeholder="State"
-                />
+                >
+                  <option value="">Select state</option>
+                  {data.personal.state && !usStates.some((state) => state.value === data.personal.state) ? (
+                    <option value={data.personal.state}>{data.personal.state}</option>
+                  ) : null}
+                  {usStates.map((state) => (
+                    <option key={state.value} value={state.value}>
+                      {state.label}
+                    </option>
+                  ))}
+                </select>
+                {validationErrors.personal?.state ? (
+                  <p className="text-xs text-red-600 md:col-span-2">{validationErrors.personal.state}</p>
+                ) : null}
                 <input
                   value={data.personal.zip || ''}
                   onChange={(event) => updatePersonal('zip', event.target.value)}
@@ -305,7 +491,7 @@ export function ConfirmClient() {
           <ConfirmationSection
             title="Academic info"
             actionLabel={editing.academic ? 'Save' : 'Edit'}
-            onAction={() => setEditing((prev) => ({ ...prev, academic: !prev.academic }))}
+            onAction={() => handleSectionToggle('academic')}
           >
             {editing.academic ? (
               <div className="grid gap-3 md:grid-cols-2">
@@ -315,42 +501,63 @@ export function ConfirmClient() {
                   className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm md:col-span-2"
                   placeholder="High school"
                 />
+                {validationErrors.academic?.highSchool ? (
+                  <p className="text-xs text-red-600 md:col-span-2">{validationErrors.academic.highSchool}</p>
+                ) : null}
                 <input
                   value={data.academic.graduationYear}
                   onChange={(event) => updateAcademic('graduationYear', event.target.value)}
                   className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
                   placeholder="Graduation year"
                 />
+                {validationErrors.academic?.graduationYear ? (
+                  <p className="text-xs text-red-600 md:col-span-2">{validationErrors.academic.graduationYear}</p>
+                ) : null}
                 <input
                   value={data.academic.gpa || ''}
                   onChange={(event) => updateAcademic('gpa', event.target.value)}
                   className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
                   placeholder="GPA"
                 />
+                {validationErrors.academic?.gpa ? (
+                  <p className="text-xs text-red-600 md:col-span-2">{validationErrors.academic.gpa}</p>
+                ) : null}
                 <input
                   value={data.academic.weightedGpa || ''}
                   onChange={(event) => updateAcademic('weightedGpa', event.target.value)}
                   className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
                   placeholder="Weighted GPA"
                 />
+                {validationErrors.academic?.weightedGpa ? (
+                  <p className="text-xs text-red-600 md:col-span-2">{validationErrors.academic.weightedGpa}</p>
+                ) : null}
                 <input
                   value={data.academic.satScore || ''}
                   onChange={(event) => updateAcademic('satScore', event.target.value)}
                   className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
                   placeholder="SAT"
                 />
+                {validationErrors.academic?.satScore ? (
+                  <p className="text-xs text-red-600 md:col-span-2">{validationErrors.academic.satScore}</p>
+                ) : null}
                 <input
                   value={data.academic.actScore || ''}
                   onChange={(event) => updateAcademic('actScore', event.target.value)}
                   className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
                   placeholder="ACT"
                 />
+                {validationErrors.academic?.actScore ? (
+                  <p className="text-xs text-red-600 md:col-span-2">{validationErrors.academic.actScore}</p>
+                ) : null}
                 <input
                   value={data.academic.classRank || ''}
                   onChange={(event) => updateAcademic('classRank', event.target.value)}
                   className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm md:col-span-2"
                   placeholder="Class rank"
                 />
+                {validationErrors.academic?.classRank ? (
+                  <p className="text-xs text-red-600 md:col-span-2">{validationErrors.academic.classRank}</p>
+                ) : null}
               </div>
             ) : (
               <div className="grid gap-3 md:grid-cols-2">
@@ -368,7 +575,7 @@ export function ConfirmClient() {
           <ConfirmationSection
             title={`Activities (${data.activities.length})`}
             actionLabel={editing.activities ? 'Save' : 'Review'}
-            onAction={() => setEditing((prev) => ({ ...prev, activities: !prev.activities }))}
+            onAction={() => handleSectionToggle('activities')}
           >
             {editing.activities ? (
               <div className="space-y-4">
@@ -380,6 +587,9 @@ export function ConfirmClient() {
                       className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
                       placeholder="Activity title"
                     />
+                    {validationErrors.activities?.[index]?.title ? (
+                      <p className="text-xs text-red-600">{validationErrors.activities[index]?.title}</p>
+                    ) : null}
                     <input
                       value={activity.position || ''}
                       onChange={(event) => updateActivity(index, 'position', event.target.value)}
@@ -400,6 +610,11 @@ export function ConfirmClient() {
                         className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
                         placeholder="Hours per week"
                       />
+                      {validationErrors.activities?.[index]?.hoursPerWeek ? (
+                        <p className="text-xs text-red-600 md:col-span-2">
+                          {validationErrors.activities[index]?.hoursPerWeek}
+                        </p>
+                      ) : null}
                       <input
                         type="number"
                         value={activity.weeksPerYear ?? ''}
@@ -413,6 +628,11 @@ export function ConfirmClient() {
                         className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
                         placeholder="Weeks per year"
                       />
+                      {validationErrors.activities?.[index]?.weeksPerYear ? (
+                        <p className="text-xs text-red-600 md:col-span-2">
+                          {validationErrors.activities[index]?.weeksPerYear}
+                        </p>
+                      ) : null}
                     </div>
                     <input
                       value={activity.grades?.join(', ') || ''}
@@ -420,12 +640,18 @@ export function ConfirmClient() {
                       className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
                       placeholder="Grades (e.g., 9, 10, 11)"
                     />
+                    {validationErrors.activities?.[index]?.grades ? (
+                      <p className="text-xs text-red-600">{validationErrors.activities[index]?.grades}</p>
+                    ) : null}
                     <textarea
                       value={activity.descriptionLong || ''}
                       onChange={(event) => updateActivity(index, 'descriptionLong', event.target.value)}
                       className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
                       placeholder="Description"
                     />
+                    {validationErrors.activities?.[index]?.descriptionLong ? (
+                      <p className="text-xs text-red-600">{validationErrors.activities[index]?.descriptionLong}</p>
+                    ) : null}
                   </div>
                 ))}
               </div>
@@ -481,7 +707,7 @@ export function ConfirmClient() {
           <ConfirmationSection
             title={`Essays (${data.essays.length})`}
             actionLabel={editing.essays ? 'Save' : 'View'}
-            onAction={() => setEditing((prev) => ({ ...prev, essays: !prev.essays }))}
+            onAction={() => handleSectionToggle('essays')}
           >
             {editing.essays ? (
               <div className="space-y-4">
@@ -504,6 +730,9 @@ export function ConfirmClient() {
                       className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
                       placeholder="Essay text"
                     />
+                    {validationErrors.essays?.[index]?.text ? (
+                      <p className="text-xs text-red-600">{validationErrors.essays[index]?.text}</p>
+                    ) : null}
                   </div>
                 ))}
               </div>

@@ -77,12 +77,18 @@ export const onboardingDataSchema = z.object({
   essays: z.array(essaySchema).max(5)
 });
 
-export const preferencesSchema = z.object({
-  firstGen: z.boolean().optional(),
-  incomeRange: z.enum(['under_30k', '30k_60k', '60k_100k', 'over_100k']).optional(),
-  ethnicity: z.array(z.string()).optional(),
-  gender: z.enum(['male', 'female', 'non_binary', 'prefer_not_to_say', 'other']).optional()
-});
+export const preferencesSchema = z
+  .object({
+    firstGen: z.boolean().optional(),
+    incomeRange: z.enum(['under_30k', '30k_60k', '60k_100k', 'over_100k']).optional(),
+    ethnicity: z.array(z.string()).optional(),
+    gender: z.enum(['male', 'female', 'non_binary', 'prefer_not_to_say', 'other']).optional(),
+    genderSelfDescribe: z.string().max(80, 'Please keep it under 80 characters').optional()
+  })
+  .refine((data) => data.gender !== 'other' || !!data.genderSelfDescribe?.trim(), {
+    message: 'Please describe your gender',
+    path: ['genderSelfDescribe']
+  });
 
 export const manualOnboardingSchema = z.object({
   personal: personalInfoSchema,

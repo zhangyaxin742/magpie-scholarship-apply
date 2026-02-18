@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import { auth, currentUser } from '@clerk/nextjs/server';
-import { getSupabaseAdmin } from '@/lib/supabase/admin';
+import { eq } from 'drizzle-orm';
+import { db } from '@/lib/db';
+import { activities, essays, profiles, users } from '@/lib/db/schema';
+import { truncateAtWord } from '@/lib/parser/utils';
 import type { PreferencesData } from '@/lib/onboarding/types';
 
 interface ProfilePayload {
@@ -52,10 +55,7 @@ export async function POST(req: Request) {
   }
 
   const body = (await req.json()) as ProfilePayload;
-  const supabase = getSupabaseAdmin();
-
   let email = body.personal?.email;
-
   if (!email) {
     const user = await currentUser();
     email = user?.emailAddresses?.[0]?.emailAddress ?? '';
@@ -65,132 +65,170 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Email is required' }, { status: 400 });
   }
 
-  const toNumber = (value?: string) => {
-    if (!value) return null;
+  const toNumber = (value?: string | number | null) => {
+    if (value === undefined) return undefined;
+    if (value === null) return null;
+    if (typeof value === 'number') return Number.isNaN(value) ? null : value;
     const trimmed = value.trim();
     if (!trimmed) return null;
     const parsed = Number(trimmed);
     return Number.isNaN(parsed) ? null : parsed;
   };
 
-  const normalizeText = (value?: string) => {
-    if (value === undefined) return null;
+  const toDecimalString = (value?: string | number | null) => {
+  if (value === undefined) return undefined;
+  if (value === null) return null;
+  if (typeof value === 'number') return Number.isNaN(value) ? null : value.toString();
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const parsed = Number(trimmed);
+  return Number.isNaN(parsed) ? null : parsed.toString();
+};
+
+  const normalizeText = (value?: string | null) => {
+    if (value === undefined) return undefined;
+    if (value === null) return null;
     const trimmed = value.trim();
     return trimmed.length ? trimmed : null;
   };
 
   try {
-    const { data: userRow, error: userError } = await supabase
-      .from('users')
-      .upsert(
-        {
+    await db.transaction(async (tx) => {
+      const [userRow] = await tx
+        .insert(users)
+        .values({
           clerk_id: userId,
           email,
-          phone: normalizeText(body.personal?.phone),
-          onboarding_completed: body.markOnboardingComplete ?? false,
-          updated_at: new Date().toISOString()
-        },
-        { onConflict: 'clerk_id' }
-      )
-      .select('id')
-      .single();
+          phone: body.personal ? normalizeText(body.personal.phone) ?? undefined : undefined,
+          onboarding_completed: body.markOnboardingComplete ?? false
+        })
+        .onConflictDoUpdate({
+          target: users.clerk_id,
+          set: {
+            email,
+            ...(body.personal ? { phone: normalizeText(body.personal.phone) } : {}),
+            ...(body.markOnboardingComplete ? { onboarding_completed: true } : {})
+          }
+        })
+        .returning({ id: users.id });
 
-    if (userError) {
-      throw userError;
-    }
+      const dbUserId = userRow?.id;
+      if (!dbUserId) {
+        throw new Error('User not found after upsert');
+      }
 
-    const supabaseUserId = userRow?.id;
+      const profileValues: typeof profiles.$inferInsert = { user_id: dbUserId };
+      const profileSet: Partial<typeof profiles.$inferInsert> = {};
 
-    if (!supabaseUserId) {
-      throw new Error('User not found after upsert');
-    }
+      const assign = <Key extends keyof typeof profiles.$inferInsert>(
+        key: Key,
+        value: typeof profiles.$inferInsert[Key] | undefined
+      ) => {
+        if (value === undefined) return;
+        profileValues[key] = value;
+        profileSet[key] = value;
+      };
 
-    const profileUpdate: Record<string, unknown> = {
-      user_id: supabaseUserId,
-      updated_at: new Date().toISOString()
-    };
+      if (body.personal) {
+        assign('first_name', normalizeText(body.personal.firstName));
+        assign('last_name', normalizeText(body.personal.lastName));
+        assign('email', normalizeText(body.personal.email ?? email));
+        assign('phone', normalizeText(body.personal.phone));
+        assign('street_address', normalizeText(body.personal.streetAddress));
+        assign('city', normalizeText(body.personal.city));
+        assign('state', normalizeText(body.personal.state));
+        assign('zip', normalizeText(body.personal.zip));
+      }
 
-    if (body.personal) {
-      profileUpdate.first_name = normalizeText(body.personal.firstName);
-      profileUpdate.last_name = normalizeText(body.personal.lastName);
-      profileUpdate.email = normalizeText(body.personal.email ?? email);
-      profileUpdate.phone = normalizeText(body.personal.phone);
-      profileUpdate.street_address = normalizeText(body.personal.streetAddress);
-      profileUpdate.city = normalizeText(body.personal.city);
-      profileUpdate.state = normalizeText(body.personal.state);
-      profileUpdate.zip = normalizeText(body.personal.zip);
-    }
+      if (body.academic) {
+        assign('high_school', normalizeText(body.academic.highSchool));
+        assign('graduation_year', body.academic.graduationYear ?? null);
+assign('gpa', toDecimalString(body.academic.gpa));
+assign('weighted_gpa', toDecimalString(body.academic.weightedGpa));
+        assign('sat_score', toNumber(body.academic.satScore));
+        assign('act_score', toNumber(body.academic.actScore));
+        assign('class_rank', normalizeText(body.academic.classRank));
+      }
 
-    if (body.academic) {
-      profileUpdate.high_school = normalizeText(body.academic.highSchool);
-      profileUpdate.graduation_year = body.academic.graduationYear ?? null;
-      profileUpdate.gpa = toNumber(body.academic.gpa);
-      profileUpdate.weighted_gpa = toNumber(body.academic.weightedGpa);
-      profileUpdate.sat_score = toNumber(body.academic.satScore);
-      profileUpdate.act_score = toNumber(body.academic.actScore);
-      profileUpdate.class_rank = normalizeText(body.academic.classRank);
-    }
 
-    if (body.preferences) {
-      profileUpdate.first_generation = body.preferences.firstGen ?? null;
-      profileUpdate.agi_range = body.preferences.incomeRange ?? null;
-      profileUpdate.ethnicity = body.preferences.ethnicity ?? null;
-      profileUpdate.gender = body.preferences.gender ?? null;
-    }
+      if (body.preferences) {
+        assign('first_generation', body.preferences.firstGen ?? undefined);
+        assign('agi_range', body.preferences.incomeRange ?? undefined);
+        assign('ethnicity', body.preferences.ethnicity ?? undefined);
+        const genderValue =
+          body.preferences.gender === 'other'
+            ? normalizeText(body.preferences.genderSelfDescribe) ?? 'other'
+            : body.preferences.gender;
+        assign('gender', genderValue ?? undefined);
+      }
 
-    if (Object.keys(profileUpdate).length > 2) {
-      await supabase
-        .from('profiles')
-        .upsert(
-          profileUpdate,
-          { onConflict: 'user_id' }
-        );
-    }
+      if (Object.keys(profileSet).length > 0) {
+        await tx
+          .insert(profiles)
+          .values(profileValues)
+          .onConflictDoUpdate({ target: profiles.user_id, set: profileSet });
+      }
 
-    if (Array.isArray(body.activities)) {
-      await supabase.from('activities').delete().eq('user_id', supabaseUserId);
-      if (body.activities.length) {
-        await supabase.from('activities').insert(
-          body.activities.map((activity) => {
-            const descriptionLong = normalizeText(activity.descriptionLong);
+      if (Array.isArray(body.activities)) {
+        await tx.delete(activities).where(eq(activities.user_id, dbUserId));
+        const normalizedActivities = body.activities
+          .map((activity) => {
+            const title = normalizeText(activity.title);
+            if (!title) return null;
+            const longSource =
+              normalizeText(activity.descriptionLong) ??
+              normalizeText(activity.descriptionMedium) ??
+              normalizeText(activity.descriptionShort);
+            const descriptionLong = longSource ? truncateAtWord(longSource, 500) : null;
+            const descriptionMedium = descriptionLong ? truncateAtWord(descriptionLong, 150) : null;
+            const descriptionShort = descriptionLong ? truncateAtWord(descriptionLong, 50) : null;
+            const grades = (activity.grades ?? []).filter((grade) => grade >= 9 && grade <= 12);
+
             return {
-              user_id: supabaseUserId,
-              title: activity.title,
+              user_id: dbUserId,
+              title,
               position: normalizeText(activity.position),
-              description_long: descriptionLong ? descriptionLong.slice(0, 500) : null,
-              description_medium: descriptionLong ? descriptionLong.slice(0, 150) : null,
-              description_short: descriptionLong ? descriptionLong.slice(0, 50) : null,
+              description_long: descriptionLong,
+              description_medium: descriptionMedium,
+              description_short: descriptionShort,
               hours_per_week: activity.hoursPerWeek ?? null,
               weeks_per_year: activity.weeksPerYear ?? null,
-              grades: activity.grades ?? null
+              grades: grades.length ? grades : null
             };
           })
-        );
-      }
-    }
+          .filter(Boolean) as Array<typeof activities.$inferInsert>;
 
-    if (Array.isArray(body.essays)) {
-      await supabase.from('essays').delete().eq('user_id', supabaseUserId);
-      if (body.essays.length) {
-        await supabase.from('essays').insert(
-          body.essays.map((essay) => ({
-            user_id: supabaseUserId,
-            topic: essay.topic,
-            title: normalizeText(essay.title),
-            tags: essay.tags ?? null,
-            text: essay.text,
-            word_count: essay.wordCount ?? essay.text.trim().split(/\s+/).length
-          }))
-        );
+        if (normalizedActivities.length) {
+          await tx.insert(activities).values(normalizedActivities);
+        }
       }
-    }
 
-    if (body.markOnboardingComplete) {
-      await supabase
-        .from('users')
-        .update({ onboarding_completed: true })
-        .eq('id', supabaseUserId);
-    }
+      if (Array.isArray(body.essays)) {
+        await tx.delete(essays).where(eq(essays.user_id, dbUserId));
+        const normalizedEssays = body.essays
+          .map((essay) => {
+            const text = normalizeText(essay.text);
+            if (!text) return null;
+            return {
+              user_id: dbUserId,
+              topic: essay.topic,
+              title: normalizeText(essay.title),
+              tags: essay.tags?.length ? essay.tags : null,
+              text,
+              word_count: essay.wordCount ?? text.trim().split(/\s+/).length
+            };
+          })
+          .filter(Boolean) as Array<typeof essays.$inferInsert>;
+
+        if (normalizedEssays.length) {
+          await tx.insert(essays).values(normalizedEssays);
+        }
+      }
+
+      if (body.markOnboardingComplete) {
+        await tx.update(users).set({ onboarding_completed: true }).where(eq(users.id, dbUserId));
+      }
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {

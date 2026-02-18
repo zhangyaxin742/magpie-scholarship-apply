@@ -1,6 +1,7 @@
 'use client';
 
 import { useFormContext } from 'react-hook-form';
+import { usStates } from '@/lib/onboarding/usStates';
 import type { ManualOnboardingForm } from '@/lib/onboarding/schemas';
 
 export function PersonalInfoForm() {
@@ -83,11 +84,17 @@ export function PersonalInfoForm() {
         </label>
         <label className="space-y-2 text-sm font-medium text-slate-700">
           State *
-          <input
+          <select
             {...register('personal.state')}
             className="w-full rounded-xl border border-slate-200 px-4 py-2 text-sm text-slate-900 focus:border-blue-600 focus:outline-none"
-            placeholder="CA"
-          />
+          >
+            <option value="">Select state</option>
+            {usStates.map((state) => (
+              <option key={state.value} value={state.value}>
+                {state.label}
+              </option>
+            ))}
+          </select>
           {errors.personal?.state ? (
             <p className="text-xs text-red-600">{errors.personal.state.message}</p>
           ) : null}
