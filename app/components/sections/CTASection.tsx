@@ -3,6 +3,10 @@
 import { SignUpButton } from '@clerk/nextjs';
 import { motion } from 'framer-motion';
 
+import { ClerkButton } from '../ui/ClerkButton';
+
+const MotionClerkButton = motion(ClerkButton);
+
 export default function CTASection() {
   return (
     <motion.section
@@ -33,7 +37,7 @@ export default function CTASection() {
           busywork off your plate.
         </p>
         <SignUpButton mode="modal" redirectUrl="/onboarding">
-          <motion.button
+          <MotionClerkButton
             type="button"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.97 }}
@@ -41,7 +45,7 @@ export default function CTASection() {
             className="rounded-full bg-white px-7 py-3 text-sm font-semibold text-blue-600 shadow-xl transition hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-indigo-600"
           >
             Get Started Free
-          </motion.button>
+          </MotionClerkButton>
         </SignUpButton>
         <p className="text-sm font-semibold text-white/80">
           No credit card • 5min setup • Actually free

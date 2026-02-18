@@ -3,7 +3,10 @@
 import { SignUpButton } from '@clerk/nextjs';
 import { motion } from 'framer-motion';
 
+import { ClerkButton } from '../ui/ClerkButton';
 import { StatCard } from '../ui/StatCard';
+
+const MotionClerkButton = motion(ClerkButton);
 
 const stats = [
   { number: '$43K', label: 'avg found per student' },
@@ -34,7 +37,7 @@ export default function Hero() {
           </p>
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
             <SignUpButton mode="modal" redirectUrl="/onboarding">
-              <motion.button
+              <MotionClerkButton
                 type="button"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.97 }}
@@ -42,7 +45,7 @@ export default function Hero() {
                 className="rounded-full bg-blue-600 px-7 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
               >
                 Start Finding Money
-              </motion.button>
+              </MotionClerkButton>
             </SignUpButton>
             <a
               href="#how-it-works"
