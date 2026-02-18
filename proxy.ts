@@ -9,6 +9,16 @@ const isPublicRoute = createRouteMatcher([
 ]);
 
 export default clerkMiddleware(async (auth, req) => {
+  const { pathname } = req.nextUrl;
+
+  if (
+    pathname.startsWith("/_next") ||
+    pathname.startsWith("/favicon.ico") ||
+    /\.[^/]+$/.test(pathname)
+  ) {
+    return NextResponse.next();
+  }
+
   const authResult = await auth();
 
   if (!authResult.userId && !isPublicRoute(req)) {
