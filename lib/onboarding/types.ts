@@ -1,3 +1,5 @@
+import type { ParsedOnboardingData } from '@/lib/parser/types';
+
 export interface PersonalInfo {
   firstName: string;
   lastName: string;
@@ -30,18 +32,20 @@ export interface Activity {
   grades?: number[];
 }
 
+export type EssayTopic =
+  | 'personal_statement'
+  | 'leadership'
+  | 'challenge'
+  | 'community_service'
+  | 'diversity'
+  | 'career_goals'
+  | 'academic_interest'
+  | 'extracurricular'
+  | 'work_experience'
+  | 'other';
+
 export interface Essay {
-  topic:
-    | 'personal_statement'
-    | 'leadership'
-    | 'challenge'
-    | 'community_service'
-    | 'diversity'
-    | 'career_goals'
-    | 'academic_interest'
-    | 'extracurricular'
-    | 'work_experience'
-    | 'other';
+  topic: EssayTopic;
   text: string;
   title?: string;
   tags?: string[];
@@ -56,9 +60,9 @@ export interface OnboardingData {
 }
 
 export interface ParsedOnboardingPayload {
-  data: OnboardingData;
+  data: ParsedOnboardingData;
   confidence: number;
-  errors?: string[];
+  errors: string[];
 }
 
 export interface PreferencesData {

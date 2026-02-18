@@ -2,13 +2,17 @@
 
 import { useCallback, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { saveParsedPayload } from '@/lib/onboarding/storage';
+import { motion } from 'framer-motion';
+import { useParsedOnboardingStore } from '@/lib/onboarding/parsedStore';
+import type { ParsedOnboardingState } from '@/lib/onboarding/parsedStore';
 import type { ParsedOnboardingPayload } from '@/lib/onboarding/types';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
 export function PDFUploader() {
   const router = useRouter();
+  const setParsedPayload = useParsedOnboardingStore((state: ParsedOnboardingState) => state.setParsedPayload);
+  const clearParsedPayload = useParsedOnboardingStore((state: ParsedOnboardingState) => state.clearParsedPayload);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -38,8 +42,9 @@ export function PDFUploader() {
       setError(null);
       setProgress(0);
       setLowConfidence(null);
+      clearParsedPayload();
     },
-    [validateFile]
+    [clearParsedPayload, validateFile]
   );
 
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -80,7 +85,7 @@ export function PDFUploader() {
         success: boolean;
         confidence: number;
         data: ParsedOnboardingPayload['data'];
-        errors?: string[];
+        errors: string[];
         error?: string;
       };
 
@@ -96,10 +101,16 @@ export function PDFUploader() {
       const payload: ParsedOnboardingPayload = {
         data: result.data,
         confidence: result.confidence,
-        errors: result.errors
+        errors: result.errors ?? []
       };
 
-      saveParsedPayload(payload);
+      setParsedPayload(payload);
+
+      if (result.confidence === 0) {
+        clearParsedPayload();
+        router.push('/onboarding/manual');
+        return;
+      }
 
       if (result.confidence < 0.7) {
         setLowConfidence(payload);
@@ -159,7 +170,12 @@ export function PDFUploader() {
             <span>{progress}%</span>
           </div>
           <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200">
-            <div className="h-full rounded-full bg-blue-600 transition-all" style={{ width: `${progress}%` }} />
+            <motion.div
+              layoutId="upload-progress"
+              className="h-full rounded-full bg-blue-600"
+              animate={{ width: `${progress}%` }}
+              transition={{ duration: 0.4, ease: 'easeOut' }}
+            />
           </div>
         </div>
       ) : null}

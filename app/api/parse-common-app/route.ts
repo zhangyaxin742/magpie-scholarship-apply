@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import pdf from 'pdf-parse';
-import { parseCommonApp, calculateConfidence } from '@/lib/parseCommonApp';
+import { parseCommonApp } from '@/lib/parser/parseCommonApp';
 
 export const runtime = 'nodejs';
 
@@ -15,15 +15,9 @@ export async function POST(req: Request) {
 
     const buffer = Buffer.from(await file.arrayBuffer());
     const pdfData = await pdf(buffer);
-    const { data, errors } = parseCommonApp(pdfData.text ?? '');
-    const confidence = calculateConfidence(data);
+    const result = parseCommonApp(pdfData.text ?? '');
 
-    return NextResponse.json({
-      success: true,
-      confidence,
-      data,
-      errors
-    });
+    return NextResponse.json(result);
   } catch (error) {
     console.error('PDF parsing error:', error);
     return NextResponse.json({ success: false, error: 'Failed to parse PDF' }, { status: 500 });
