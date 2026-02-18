@@ -46,7 +46,7 @@ export const activitySchema = z.object({
   description: z.string().optional(),
   hoursPerWeek: z.coerce.number().min(0).max(40).optional(),
   weeksPerYear: z.coerce.number().min(0).max(52).optional(),
-  grades: z.array(z.number().int()).optional()
+  grades: z.array(z.coerce.number().int()).optional()
 });
 
 export const essaySchema = z.object({
@@ -60,6 +60,14 @@ export const onboardingDataSchema = z.object({
   academic: academicInfoSchema,
   activities: z.array(activitySchema).max(10),
   essays: z.array(essaySchema).max(5)
+});
+
+export const preferencesSchema = z.object({
+  firstGen: z.enum(['yes', 'no', 'prefer_not']).optional(),
+  incomeRange: z.enum(['under_30k', '30_60k', '60_100k', 'over_100k', 'prefer_not']).optional(),
+  ethnicity: z.array(z.string()).optional(),
+  gender: z.enum(['male', 'female', 'non_binary', 'prefer_not', 'self_describe']).optional(),
+  genderOther: z.string().optional()
 });
 
 export const manualOnboardingSchema = z.object({
