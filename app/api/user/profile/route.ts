@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { auth, clerkClient } from '@clerk/nextjs/server';
+import { auth, currentUser } from '@clerk/nextjs/server';
 import { getSupabaseAdmin } from '@/lib/supabase/admin';
 import type { PreferencesData } from '@/lib/onboarding/types';
 
@@ -53,8 +53,8 @@ export async function POST(req: Request) {
   let email = body.personal?.email;
 
   if (!email) {
-    const user = await clerkClient.users.getUser(userId);
-    email = user.emailAddresses?.[0]?.emailAddress ?? '';
+    const user = await currentUser();
+    email = user?.emailAddresses?.[0]?.emailAddress ?? '';
   }
 
   try {
