@@ -27,7 +27,11 @@ export default function Nav() {
           >
             How it works
           </a>
-          <SignUpButton mode="modal" redirectUrl="/onboarding">
+          <SignUpButton
+            mode="modal"
+            forceRedirectUrl="/onboarding"
+            signInForceRedirectUrl="/onboarding"
+          >
             <ClerkButton
               type="button"
               className="rounded-full bg-blue-600 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
@@ -60,7 +64,11 @@ export default function Nav() {
             >
               How it works
             </a>
-            <SignUpButton mode="modal" redirectUrl="/onboarding">
+            <SignUpButton
+              mode="modal"
+              forceRedirectUrl="/onboarding"
+              signInForceRedirectUrl="/onboarding"
+            >
               <ClerkButton
                 type="button"
                 className="w-full rounded-full bg-blue-600 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"

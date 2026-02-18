@@ -7,6 +7,8 @@ type ClerkButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   redirectUrl?: string | null;
   forceRedirectUrl?: string | null;
   fallbackRedirectUrl?: string | null;
+  signInForceRedirectUrl?: string | null;
+  signInFallbackRedirectUrl?: string | null;
   component?: string | null;
   afterSignUpUrl?: string | null;
   afterSignInUrl?: string | null;
@@ -21,6 +23,8 @@ export const ClerkButton = forwardRef<HTMLButtonElement, ClerkButtonProps>(
       redirectUrl,
       forceRedirectUrl,
       fallbackRedirectUrl,
+      signInForceRedirectUrl,
+      signInFallbackRedirectUrl,
       component,
       afterSignUpUrl,
       afterSignInUrl,

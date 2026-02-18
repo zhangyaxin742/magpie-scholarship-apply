@@ -36,7 +36,11 @@ export default function Hero() {
             rates. Apply in minutes, not hours.
           </p>
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-            <SignUpButton mode="modal" redirectUrl="/onboarding">
+            <SignUpButton
+              mode="modal"
+              forceRedirectUrl="/onboarding"
+              signInForceRedirectUrl="/onboarding"
+            >
               <MotionClerkButton
                 type="button"
                 whileHover={{ scale: 1.05 }}

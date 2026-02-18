@@ -36,7 +36,11 @@ export default function CTASection() {
           Magpie finds the scholarships you can actually win, then takes the
           busywork off your plate.
         </p>
-        <SignUpButton mode="modal" redirectUrl="/onboarding">
+        <SignUpButton
+          mode="modal"
+          forceRedirectUrl="/onboarding"
+          signInForceRedirectUrl="/onboarding"
+        >
           <MotionClerkButton
             type="button"
             whileHover={{ scale: 1.05 }}
