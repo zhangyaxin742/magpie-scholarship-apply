@@ -1,4 +1,5 @@
-import type { OnboardingData, ParsedOnboardingPayload } from './types';
+import type { ManualOnboardingForm } from './schemas';
+import type { ParsedOnboardingPayload } from './types';
 
 const PARSED_KEY = 'magpie_onboarding_parsed';
 const MANUAL_KEY = 'magpie_onboarding_manual';
@@ -24,17 +25,17 @@ export function clearParsedPayload() {
   sessionStorage.removeItem(PARSED_KEY);
 }
 
-export function saveManualDraft(data: OnboardingData) {
+export function saveManualDraft(data: ManualOnboardingForm) {
   if (typeof window === 'undefined') return;
   localStorage.setItem(MANUAL_KEY, JSON.stringify(data));
 }
 
-export function loadManualDraft(): OnboardingData | null {
+export function loadManualDraft(): ManualOnboardingForm | null {
   if (typeof window === 'undefined') return null;
   const raw = localStorage.getItem(MANUAL_KEY);
   if (!raw) return null;
   try {
-    return JSON.parse(raw) as OnboardingData;
+    return JSON.parse(raw) as ManualOnboardingForm;
   } catch {
     return null;
   }
