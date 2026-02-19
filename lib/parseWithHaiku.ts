@@ -104,6 +104,14 @@ ${pdfText}
 
 Return ONLY the JSON object.`;
 
+const message = await anthropic.messages.create({
+  model: MODEL,
+  max_tokens: 2000,
+  temperature: 0,
+  system: "You are a data extraction engine. Output ONLY valid JSON that matches the schema. No prose, no markdown.",
+  messages: [{ role: "user", content: buildPrompt(cleanedText) }]
+});
+
 const extractJson = (text: string): string => {
   const trimmed = text.trim();
   if (!trimmed) throw new Error('Claude returned empty response');
