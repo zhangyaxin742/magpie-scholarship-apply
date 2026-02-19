@@ -147,7 +147,7 @@ export async function parseWithHaiku(pdfText: string): Promise<HaikuParseResult>
   const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
   const message = await anthropic.messages.create({
     model: MODEL,
-    max_tokens: 6000,
+    max_tokens: 4096,
     temperature: 0,
     messages: [
       {
