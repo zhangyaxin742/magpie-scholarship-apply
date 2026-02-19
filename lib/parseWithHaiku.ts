@@ -1,7 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import type { HaikuCommonAppPayload } from '@/lib/haiku/commonApp';
 
-const MODEL = 'claude-haiku-3-5-20241022';
+const MODEL = 'claude-3-haiku-20240307';
 const INPUT_COST_PER_MILLION = 1;
 const OUTPUT_COST_PER_MILLION = 5;
 
