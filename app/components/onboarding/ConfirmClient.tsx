@@ -16,7 +16,7 @@ import {
   onboardingDataSchema,
   personalInfoSchema
 } from '@/lib/onboarding/schemas';
-import { truncateAtWord } from '@/lib/parser/utils';
+import { truncateAtWord } from '@/lib/utils/text';
 
 const emptyData = JSON.parse(JSON.stringify(emptyOnboardingData)) as OnboardingData;
 const essayTopics: OnboardingData['essays'][number]['topic'][] = [

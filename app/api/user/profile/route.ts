@@ -3,7 +3,7 @@ import { auth, currentUser } from '@clerk/nextjs/server';
 import { eq } from 'drizzle-orm';
 import { db } from '@/lib/db';
 import { activities, essays, profiles, users } from '@/lib/db/schema';
-import { truncateAtWord } from '@/lib/parser/utils';
+import { truncateAtWord } from '@/lib/utils/text';
 import type { PreferencesData } from '@/lib/onboarding/types';
 
 interface ProfilePayload {

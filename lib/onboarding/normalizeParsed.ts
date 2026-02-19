@@ -1,5 +1,4 @@
-import type { ParsedOnboardingData } from '@/lib/parser/types';
-import type { OnboardingData } from './types';
+import type { OnboardingData, ParsedOnboardingData } from './types';
 import { emptyOnboardingData } from './defaults';
 
 const toStringValue = (value: number | null) => (value === null ? '' : String(value));
