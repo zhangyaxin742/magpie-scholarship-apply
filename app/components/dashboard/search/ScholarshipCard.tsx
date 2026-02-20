@@ -55,7 +55,7 @@ export function ScholarshipCard({
     if (!isTop) return;
     dragX.set(0);
     controls.set({ scale: 1, y: 0, opacity: 1 });
-  }, [controls, isTop]);
+  }, [controls, dragX, isTop]);
 
   const amountLabel = scholarship.amount
     ? currencyFormatter.format(scholarship.amount)
@@ -130,13 +130,21 @@ export function ScholarshipCard({
     if (isAnimating) return;
     setIsAnimating(true);
     if (shouldReduceMotion) {
-      direction === 'right' ? onAdd() : onReject();
+      if (direction === 'right') {
+        onAdd();
+      } else {
+        onReject();
+      }
       return;
     }
     const targetX = direction === 'right' ? 700 : -700;
     animateDragX(targetX, 0.3);
     await controls.start({ opacity: 0, transition: { duration: 0.3, ease: 'easeOut' } });
-    direction === 'right' ? onAdd() : onReject();
+    if (direction === 'right') {
+      onAdd();
+    } else {
+      onReject();
+    }
   };
 
   const handleDragEnd = (_: unknown, info: { offset: { x: number } }) => {

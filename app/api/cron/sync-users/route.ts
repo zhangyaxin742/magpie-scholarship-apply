@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
   );
 
   try {
-    let allUsers: any[] = [];
+    let allUsers: Awaited<ReturnType<typeof clerkClient.users.getUserList>> = [];
     let hasMore = true;
     let offset = 0;
 

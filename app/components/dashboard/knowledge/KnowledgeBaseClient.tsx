@@ -388,7 +388,7 @@ export function KnowledgeBaseClient({ initialEssays, initialActivities }: Knowle
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['activities'] })
   });
 
-  const essays = essaysQuery.data ?? [];
+  const essays = useMemo(() => essaysQuery.data ?? [], [essaysQuery.data]);
   const activities = activitiesQuery.data ?? [];
 
   const essayGroups = useMemo(() => {

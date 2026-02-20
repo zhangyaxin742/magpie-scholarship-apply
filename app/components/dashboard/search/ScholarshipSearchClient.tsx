@@ -194,7 +194,7 @@ export function ScholarshipSearchClient({
       const currentCards = useSearchStore.getState().cards;
       setCards([...currentCards, ...data.scholarships], data.nextCursor, data.aiRanked);
       setLoading(false);
-    } catch (error) {
+    } catch {
       setLoading(false);
     }
   }, [filters, queryClient, setCards, setLoading]);
@@ -325,7 +325,7 @@ export function ScholarshipSearchClient({
               <div className="text-4xl">🎉</div>
               <div>
                 <h2 className="text-lg font-semibold text-slate-900">
-                  You've seen all matching scholarships!
+                  You&apos;ve seen all matching scholarships!
                 </h2>
                 <p className="mt-2 text-sm text-slate-600">
                   Adjust your filters or check back as we add more.

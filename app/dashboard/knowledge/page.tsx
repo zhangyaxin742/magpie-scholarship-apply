@@ -1,9 +1,7 @@
 import { auth } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
-import { asc, desc } from 'drizzle-orm';
 
 import { db } from '@/lib/db';
-import { users } from '@/lib/db/schema';
 import { KnowledgeBaseClient } from '@/app/components/dashboard/knowledge/KnowledgeBaseClient';
 
 type EssayTopic =

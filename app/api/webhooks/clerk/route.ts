@@ -2,9 +2,6 @@ import { Webhook } from 'svix';
 import { headers } from 'next/headers';
 import { WebhookEvent } from '@clerk/nextjs/server';
 import { createClient } from '@supabase/supabase-js';
-import { db } from '@/lib/db';
-import { users } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -52,7 +49,7 @@ export async function POST(req: Request) {
   const eventType = evt.type;
 
   if (eventType === 'user.created') {
-    const { id, email_addresses, first_name, last_name } = evt.data;
+    const { id, email_addresses } = evt.data;
 
     const { error } = await supabase.from('users').insert({
       clerk_id: id,
@@ -70,7 +67,7 @@ export async function POST(req: Request) {
   }
 
   if (eventType === 'user.updated') {
-    const { id, email_addresses, first_name, last_name } = evt.data;
+    const { id, email_addresses } = evt.data;
 
     const { error } = await supabase
       .from('users')

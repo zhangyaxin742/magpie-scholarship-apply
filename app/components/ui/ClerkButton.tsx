@@ -34,7 +34,23 @@ export const ClerkButton = forwardRef<HTMLButtonElement, ClerkButtonProps>(
       ...props
     },
     ref
-  ) => <button ref={ref} {...props} />
+  ) => {
+    const ignoredProps = {
+      redirectUrl,
+      forceRedirectUrl,
+      fallbackRedirectUrl,
+      signInForceRedirectUrl,
+      signInFallbackRedirectUrl,
+      component,
+      afterSignUpUrl,
+      afterSignInUrl,
+      mode,
+      signUpUrl,
+      signInUrl
+    };
+    void ignoredProps;
+    return <button ref={ref} {...props} />;
+  }
 );
 
 ClerkButton.displayName = 'ClerkButton';

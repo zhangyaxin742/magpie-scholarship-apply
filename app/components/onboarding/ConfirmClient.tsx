@@ -241,7 +241,7 @@ export function ConfirmClient() {
       return;
     }
 
-    let nextErrors: typeof validationErrors = { ...validationErrors };
+    const nextErrors: typeof validationErrors = { ...validationErrors };
     if (section === 'personal') {
       const errors = validatePersonalSection();
       if (errors) {
