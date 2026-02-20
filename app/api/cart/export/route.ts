@@ -10,7 +10,7 @@ const getUser = async (clerkId: string) =>
     where: (u, { eq }) => eq(u.clerk_id, clerkId)
   });
 
-const escapeCsv = (value: string) => `"${value.replace(/"/g, '""')}"`;
+const escapeCsv = (value: string | null | undefined) => `"${(value ?? '').replace(/"/g, '""')}"`;
 
 const formatDate = (value: Date | string | null | undefined) => {
   if (!value) return '';

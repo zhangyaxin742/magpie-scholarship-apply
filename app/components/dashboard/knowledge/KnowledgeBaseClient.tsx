@@ -393,8 +393,9 @@ export function KnowledgeBaseClient({ initialEssays, initialActivities }: Knowle
 
   const essayGroups = useMemo(() => {
     return essays.reduce<Record<string, Essay[]>>((acc, essay) => {
-      if (!acc[essay.topic]) acc[essay.topic] = [];
-      acc[essay.topic].push(essay);
+      const existing = acc[essay.topic] ?? [];
+      existing.push(essay);
+      acc[essay.topic] = existing;
       return acc;
     }, {});
   }, [essays]);

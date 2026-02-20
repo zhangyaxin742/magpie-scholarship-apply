@@ -3,8 +3,9 @@ import { redirect } from 'next/navigation';
 import { desc, eq } from 'drizzle-orm';
 
 import { db } from '@/lib/db';
-import { essays, scholarships, user_scholarships, users } from '@/lib/db/schema';
+import { scholarships, user_scholarships } from '@/lib/db/schema';
 import { CartClient } from '@/app/components/dashboard/cart/CartClient';
+import type { CartItem, CartResponse, CartStatus, Essay, EssayTopic } from '@/app/components/dashboard/cart/types';
 
 const essayTopics = new Set([
   'personal_statement',
@@ -18,6 +19,8 @@ const essayTopics = new Set([
   'work_experience',
   'other'
 ]);
+
+const isEssayTopic = (value: string): value is EssayTopic => essayTopics.has(value);
 
 const toIsoString = (value: Date | string | null) => {
   if (!value) return null;
@@ -53,9 +56,9 @@ export default async function CartPage() {
       .where(eq(user_scholarships.user_id, user.id))
   ]);
 
-  const essaysNormalized = essayRows.map((essay) => ({
+  const essaysNormalized: Essay[] = essayRows.map((essay) => ({
     id: essay.id,
-    topic: essayTopics.has(essay.topic) ? essay.topic : 'other',
+    topic: isEssayTopic(essay.topic) ? essay.topic : 'other',
     title: essay.title ?? null,
     text: essay.text,
     word_count: essay.word_count ?? null,
@@ -64,13 +67,13 @@ export default async function CartPage() {
     created_at: essay.created_at ? essay.created_at.toISOString() : null
   }));
 
-  const cartItems = cartRows.map((row) => {
+  const cartItems: CartItem[] = cartRows.map((row) => {
     const scholarship = row.scholarship;
     return {
       id: row.userScholarship.id,
       user_id: row.userScholarship.user_id,
       scholarship_id: row.userScholarship.scholarship_id,
-      status: row.userScholarship.status,
+      status: row.userScholarship.status as CartStatus,
       added_to_cart_at: toIsoString(row.userScholarship.added_to_cart_at),
       applied_at: toIsoString(row.userScholarship.applied_at),
       decision_date: toIsoString(row.userScholarship.decision_date),
@@ -93,22 +96,22 @@ export default async function CartPage() {
     };
   });
 
-  const inCart = cartItems
+  const inCart: CartResponse['inCart'] = cartItems
     .filter((item) => item.status === 'in_cart')
     .sort(
       (a, b) => new Date(a.scholarship.deadline).getTime() - new Date(b.scholarship.deadline).getTime()
     );
-  const applied = cartItems
+  const applied: CartResponse['applied'] = cartItems
     .filter((item) => item.status === 'applied')
     .sort(
       (a, b) => (b.applied_at ? new Date(b.applied_at).getTime() : 0) - (a.applied_at ? new Date(a.applied_at).getTime() : 0)
     );
-  const won = cartItems
+  const won: CartResponse['won'] = cartItems
     .filter((item) => item.status === 'won')
     .sort(
       (a, b) => (b.decision_date ? new Date(b.decision_date).getTime() : 0) - (a.decision_date ? new Date(a.decision_date).getTime() : 0)
     );
-  const lost = cartItems.filter((item) => item.status === 'lost');
+  const lost: CartResponse['lost'] = cartItems.filter((item) => item.status === 'lost');
 
   return (
     <CartClient

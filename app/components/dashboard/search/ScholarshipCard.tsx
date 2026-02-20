@@ -119,11 +119,12 @@ export function ScholarshipCard({
     resume: scholarship.requiresResume
   };
 
-  const animateDragX = (to: number, duration: number) =>
+  const animateDragX = (to: number, duration: number) => {
     animate(dragX, to, {
       duration: shouldReduceMotion ? 0 : duration,
       ease: 'easeOut'
-    }).finished;
+    });
+  };
 
   const animateOff = async (direction: 'left' | 'right') => {
     if (isAnimating) return;
@@ -133,10 +134,8 @@ export function ScholarshipCard({
       return;
     }
     const targetX = direction === 'right' ? 700 : -700;
-    await Promise.all([
-      animateDragX(targetX, 0.3),
-      controls.start({ opacity: 0, transition: { duration: 0.3, ease: 'easeOut' } })
-    ]);
+    animateDragX(targetX, 0.3);
+    await controls.start({ opacity: 0, transition: { duration: 0.3, ease: 'easeOut' } });
     direction === 'right' ? onAdd() : onReject();
   };
 
