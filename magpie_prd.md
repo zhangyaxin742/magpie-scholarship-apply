@@ -197,8 +197,8 @@ We solve the core problems through:
 ┌─────────────────────────────────────────────────────────┐
 │                 EXTERNAL SERVICES                        │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐ │
-│  │  PDF Parser  │  │  Web Scraper │  │    Resend    │ │
-│  │ (pdf-parse)  │  │ (Playwright) │  │   (Email)    │ │
+│  │  PDF Parser  │  │  Web Fetch   │  │    Resend    │ │
+│  │ (pdf-parse)  │  │fetch+cheerio │  │   (Email)    │ │
 │  └──────────────┘  └──────────────┘  └──────────────┘ │
 └─────────────────────────────────────────────────────────┘
 ```
@@ -263,6 +263,17 @@ User adds scholarship to cart →
 - **ORM:** Drizzle ORM
 - **Rationale:** Type-safe, faster than Prisma, excellent DX
 
+### Database Client Split (Rule — apply consistently)
+
+Two clients are used for different purposes. Default to thinking about whether RLS needs to fire before choosing:
+
+| Operation | Client | Reason |
+|-----------|--------|--------|
+| Scholarship search, cart operations, complex joins, admin pipeline | **Drizzle** (service-role, server-side) | No per-user RLS needed; server owns the query |
+| Profile writes, essay CRUD, activity CRUD | **Supabase client (user JWT)** | RLS policies must fire against the user's JWT to enforce row-level ownership |
+
+**Rule of thumb:** If the operation reads/writes data that belongs to a specific user and has an RLS policy, use the Supabase client with the user's JWT. If it's a server-side query that joins across tables or doesn't need RLS (scholarship discovery, search ranking, admin review), use Drizzle.
+
 **File Storage:** Vercel Blob Storage
 - **Use Case:** PDF uploads, user-generated files
 - **Rationale:** Native Vercel integration, simple pricing
@@ -311,9 +322,10 @@ The scholarship data layer uses a **three-tier hybrid approach** with a two-mode
 - Human-verified source of truth for MVP launch
 - No scraper, no LLM — just accurate data students can trust
 
-**Tier 2 — Targeted Playwright Scraper:**
-- **Tool:** Playwright (headless browser)
+**Tier 2 — Targeted Fetch + Parse:**
+- **Tool:** Node.js native `fetch()` + cheerio (HTML parsing)
 - **Targets:** Known high-yield sources — county community foundations, state higher-ed commission pages, Rotary/Lions/Kiwanis chapter sites, high school counselor pages
+- **Rationale:** These sites are overwhelmingly static HTML — no JavaScript rendering needed. `fetch()` + cheerio is zero-dependency, fast, and requires no binary installs.
 - **Frequency:** Weekly cron job
 - **Storage:** Raw page text saved to `scholarships_pending` staging table
 
@@ -322,14 +334,26 @@ The scholarship data layer uses a **three-tier hybrid approach** with a two-mode
 *Step A — Discovery (Gemini Flash 2.0 + Google Search Grounding):*
 - **Model:** `gemini-2.0-flash` via Google AI Studio API (`@google/generative-ai`)
 - **Grounding:** Google Search grounding tool enabled — Gemini queries Google's live index, not its training memory
-- **Input:** Student profile attributes (city, state, GPA range, demographics, graduation year) + search intent
-- **Prompt pattern:** `"Find scholarship opportunities available to students in {city}, {state} with GPA around {gpa}. Include local community foundations, civic organizations, and regional programs. Return only real URLs you found via search."`
+- **Input:** Full student profile — city, state, GPA, graduation year, ethnicity, gender, first-generation status, AGI range, intended major, athletics, and EC categories. All available profile fields are passed so Gemini can construct targeted, personalized search queries (e.g. a Hispanic first-gen student in Oakland earning under $30K gets different queries than a general student in the same city).
+- **Prompt pattern:**
+  ```
+  "Find real scholarship URLs for a student with this profile:
+  Location: {city}, {state}
+  GPA: {gpa} | Graduation year: {graduation_year}
+  Demographics: {ethnicity?.join(', ')}, {gender}, first-generation: {first_generation}
+  Income range: {agi_range}
+  
+  Search for: local scholarships, community foundation awards, civic organization 
+  grants (Rotary, Lions, Kiwanis), regional scholarships, and any scholarships 
+  targeted at this student's specific demographic profile.
+  Return only real URLs you found via Google Search — no fabricated links."
+  ```
 - **Output:** Gemini returns cited URLs with source grounding metadata — these are real pages from Google's index
 - **What it does NOT do:** Generate scholarship details from memory — it only surfaces URLs
 
 *Step B — Extraction (Claude Haiku):*
 - **Model:** `claude-haiku-4-5` via existing Anthropic API key (same key as PDF parser)
-- **Input:** Raw page text fetched by Playwright from each Gemini-discovered URL
+- **Input:** Raw page text fetched via `fetch()` + cheerio from each Gemini-discovered URL
 - **Prompt:** Structured extraction — pull name, organization, amount, deadline, eligibility requirements, application URL from page content only
 - **Grounding:** Haiku is explicitly instructed to extract only what is present in the provided text, never infer or complete missing fields
 - **Output:** Structured JSON matching `scholarships` table schema
@@ -348,7 +372,7 @@ The scholarship data layer uses a **three-tier hybrid approach** with a two-mode
 **Data Refresh:**
 - Cron runs Tier 2 + Tier 3 pipeline weekly
 - Gemini re-queries for each active geographic region
-- Stale detection: flag records where `deadline` has passed or Playwright gets a 404
+- Stale detection: flag records where `deadline` has passed or `fetch()` returns a 404/error
 
 **Manual Curation:** Always the starting point for each new geographic area expanded into
 
@@ -852,13 +876,17 @@ LIMIT 50;
 
 ```
 [Gemini Flash 2.0 + Google Search Grounding]
-  Input: student profile attributes (city, state, GPA, demographics)
-  Prompt: "Find real scholarship URLs for students in {city}, {state}..."
+  Input: full student profile (city, state, GPA, graduation year, ethnicity,
+         gender, first_generation, agi_range, intended major, athletics, ECs)
+  Prompt: personalized per-profile search queries targeting local/regional/
+         demographic-specific scholarships — Gemini generates multiple queries
+         from the profile to maximize coverage
   Grounding: queries Google's live index — returns cited, real URLs only
           │
           ▼ Returns verified URLs with source citations
-[Playwright Scraper]
-  Fetches each URL → extracts raw page text
+[fetch() + cheerio]
+  Fetches each URL → parses static HTML → extracts raw page text
+  (No headless browser needed — target sites are static HTML)
           │
           ▼ raw_page_text stored in scholarships_pending
 [Claude Haiku Extraction]
@@ -1901,10 +1929,10 @@ function autofillField(element, value) {
 
 **Goals:**
 - [ ] Manually curate and verify 50–100 local scholarships (Tier 1 seed)
-- [ ] Build targeted Playwright scraper for known source types (community foundations, state higher-ed pages, Rotary/Lions chapters)
-- [ ] Integrate Gemini Flash 2.0 (Google AI Studio API) for URL discovery by region using Google Search grounding
-- [ ] Build Claude Haiku extraction pipeline: Playwright raw text → structured JSON
-- [ ] Wire the two-model sequence: Gemini discovers URLs → Playwright fetches → Haiku extracts → pending queue
+- [ ] Build targeted fetch + cheerio scraper for known source types (community foundations, state higher-ed pages, Rotary/Lions chapters) — `npm install cheerio`, no binary dependencies
+- [ ] Integrate Gemini Flash 2.0 (Google AI Studio API) for URL discovery by region using full student profile + Google Search grounding
+- [ ] Build Claude Haiku extraction pipeline: cheerio-extracted raw text → structured JSON
+- [ ] Wire the two-model sequence: Gemini discovers URLs → fetch+cheerio fetches → Haiku extracts → pending queue
 - [ ] Build `scholarships_pending` admin review queue (simple internal UI or direct DB access for MVP)
 - [ ] Run `scholarships_pending` migration in Supabase (schema defined in Section 6)
 - [ ] Set up weekly cron job for Tier 2 + Tier 3 refresh
@@ -1912,8 +1940,8 @@ function autofillField(element, value) {
 
 **Deliverables:**
 - 50+ verified scholarships in `scholarships` table
-- Scraper working for 5+ site types
-- Two-model pipeline live: Gemini (discovery) → Playwright (fetch) → Haiku (extraction) → pending queue
+- fetch + cheerio scraper working for 5+ site types
+- Two-model pipeline live: Gemini (discovery) → fetch+cheerio (parse) → Haiku (extraction) → pending queue
 - Admin can approve/reject extracted scholarships
 - Data refresh cron job running
 
@@ -2047,7 +2075,7 @@ function autofillField(element, value) {
 | **Hosting** | Vercel | Zero-config Next.js deploys |
 | **Monitoring** | Vercel Analytics, Sentry | Web Vitals, error tracking |
 | **PDF Parsing** | pdf-parse | Free, fast, predictable |
-| **Web Scraping** | Playwright | Headless browser automation |
+| **Web Scraping** | `fetch()` + cheerio | Lightweight static HTML fetch and parse; no binary dependencies, no headless browser needed for target sites |
 | **Scholarship Discovery** | Gemini Flash 2.0 (Google AI Studio API, `@google/generative-ai`) | Google Search grounding finds real scholarship URLs via live index — not model recall |
 | **Scholarship Extraction** | Claude Haiku (Anthropic API — same key as PDF parser) | Reads scraped page text, outputs structured JSON; ~$0.001–0.003/page |
 | **In-Feed Matching/Ranking** | Claude Haiku (Anthropic API) | Ranks SQL-filtered candidate pool by profile fit; called once per search request |
@@ -2063,7 +2091,7 @@ function autofillField(element, value) {
 | `/api/essays` | GET/POST/PUT/DELETE | CRUD essays |
 | `/api/activities` | GET/POST/PUT/DELETE | CRUD activities |
 | `/api/scholarships/search` | GET | Search scholarships (with filters) |
-| `/api/scholarships/discover` | POST | Trigger Gemini-grounded discovery for a region → queues Playwright fetch + Haiku extraction |
+| `/api/scholarships/discover` | POST | Trigger Gemini-grounded discovery for a region → queues fetch+cheerio parse + Haiku extraction |
 | `/api/admin/pending` | GET | List scholarships_pending records for review |
 | `/api/admin/pending/:id/approve` | POST | Approve extracted scholarship → moves to live table |
 | `/api/admin/pending/:id/reject` | POST | Reject extracted scholarship |
@@ -2078,9 +2106,9 @@ function autofillField(element, value) {
 | Risk | Likelihood | Impact | Mitigation |
 |------|-----------|--------|------------|
 | PDF parsing fails for >20% of users | Medium | High | Build robust manual entry fallback, test on diverse PDFs |
-| Can't scrape enough local scholarships | Medium | Critical | Three-tier pipeline (manual seed → Playwright → Gemini discovery + Haiku extraction) mitigates single point of failure; manual curation always available as floor |
+| Can't scrape enough local scholarships | Medium | Critical | Three-tier pipeline (manual seed → fetch+cheerio → Gemini discovery + Haiku extraction) mitigates single point of failure; manual curation always available as floor |
 | AI extraction hallucinates scholarship data | Low | High | Gemini uses live Google Search grounding (not model recall) for URLs; Haiku reads scraped page text only; source_url always stored; human review gate before any record goes live |
-| Gemini grounding returns stale or irrelevant URLs | Low | Medium | Playwright validates each URL before extraction; 404s and parse failures flagged as needs_review in scholarships_pending |
+| Gemini grounding returns stale or irrelevant URLs | Low | Medium | fetch() validates each URL before extraction (non-200 responses flagged); parse failures flagged as needs_review in scholarships_pending |
 | Users don't complete onboarding | High | High | Make PDF import dead simple, show value immediately |
 | Scholarship data goes stale | Medium | Medium | Build refresh cron job, user reporting |
 | Users don't actually apply | Medium | High | Add tracking, reminders, make application easier |
@@ -2106,6 +2134,8 @@ function autofillField(element, value) {
 | 1.0 | 2026-02-14 | Engineering Team | Initial PRD for MVP |
 | 1.1 | 2026-02-19 | Engineering Team | Revised scholarship discovery pipeline: three-tier hybrid (manual seed + Playwright scraper + Tavily/Haiku AI extraction); added `scholarships_pending` staging table and admin review workflow; expanded eligibility schema (athletics, EC categories); updated matching algorithm, API endpoints, risk register, and tech stack |
 | 1.2 | 2026-02-20 | Engineering Team | Replaced Tavily with Gemini Flash 2.0 + Google Search grounding for URL discovery; Haiku retained for page extraction; added third risk row for grounding URL quality; updated tech stack table, Phase 4 goals, pipeline flow diagram, and API endpoint description |
+| 1.3 | 2026-02-20 | Engineering Team | Gemini discovery input expanded to full student profile (ethnicity, gender, first_generation, agi_range, athletics, ECs, graduation year — not just city/state/GPA); added DB client split rule (Drizzle for search/cart/joins, Supabase JWT client for profile/essays/activities where RLS must fire) |
+| 1.4 | 2026-02-20 | Engineering Team | Replaced Playwright with `fetch()` + cheerio throughout — target sites are static HTML, headless browser unnecessary; updated architecture diagram, Tier 2 description, flow diagram, Phase 4 goals/deliverables, tech stack table, API endpoint description, and risk register |
 
 ---
 
