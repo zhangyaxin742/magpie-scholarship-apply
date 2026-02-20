@@ -1,5 +1,11 @@
 import { pgTable, text, uuid, timestamp, boolean, integer, decimal, date, jsonb, index, uniqueIndex } from 'drizzle-orm/pg-core';
 
+export type EmailPreferences = {
+  deadlineReminders: boolean;
+  newMatches: boolean;
+  weeklyDigest: boolean;
+};
+
 export const users = pgTable('users', {
   id: uuid('id').primaryKey().defaultRandom(),
   email: text('email').notNull().unique(),
@@ -8,7 +14,14 @@ export const users = pgTable('users', {
   created_at: timestamp('created_at', { withTimezone: true }).defaultNow(),
   onboarding_completed: boolean('onboarding_completed').default(false),
   last_login_at: timestamp('last_login_at', { withTimezone: true }),
-  updated_at: timestamp('updated_at', { withTimezone: true }).defaultNow()
+  updated_at: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+  email_preferences: jsonb('email_preferences')
+    .$type<EmailPreferences>()
+    .default({
+      deadlineReminders: true,
+      newMatches: true,
+      weeklyDigest: false
+    })
 }, (table) => ({
   clerk_id_idx: index('idx_users_clerk_id').on(table.clerk_id),
   email_idx: index('idx_users_email').on(table.email),

@@ -1,8 +1,16 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { auth, currentUser } from '@clerk/nextjs/server';
+import { z } from 'zod';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { truncateAtWord } from '@/lib/utils/text';
 import type { PreferencesData } from '@/lib/onboarding/types';
+
+const normalizeText = (value?: string | null) => {
+  if (value === undefined) return undefined;
+  if (value === null) return null;
+  const trimmed = value.trim();
+  return trimmed.length ? trimmed : null;
+};
 
 const extractPgErrorDetails = (error: unknown) => {
   const candidate = (error && typeof error === 'object' ? error : null) as
@@ -55,6 +63,44 @@ const logDbError = (error: unknown, step: string, userId?: string | null) => {
     error
   });
 };
+
+const optionalText = (schema: z.ZodString) =>
+  z.preprocess(
+    (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
+    schema.optional()
+  );
+
+const optionalNumber = (schema: z.ZodNumber) =>
+  z.preprocess(
+    (value) => {
+      if (value === '' || value === null || value === undefined) return undefined;
+      if (typeof value === 'string') return Number(value);
+      return value;
+    },
+    schema.optional()
+  );
+
+const profileUpdateSchema = z.object({
+  first_name: optionalText(z.string().min(1).max(50)),
+  last_name: optionalText(z.string().min(1).max(50)),
+  email: optionalText(z.string().email()),
+  phone: optionalText(z.string()),
+  street_address: optionalText(z.string()),
+  city: optionalText(z.string()),
+  state: optionalText(z.string().length(2)),
+  zip: optionalText(z.string()),
+  high_school: optionalText(z.string()),
+  graduation_year: optionalNumber(z.number().int().min(2020).max(2035)),
+  gpa: optionalNumber(z.number().min(0).max(5)),
+  weighted_gpa: optionalNumber(z.number().min(0).max(5)),
+  sat_score: optionalNumber(z.number().int().min(400).max(1600)),
+  act_score: optionalNumber(z.number().int().min(1).max(36)),
+  class_rank: optionalText(z.string()),
+  gender: z.enum(['male', 'female', 'non_binary', 'prefer_not_to_say', 'other']).optional(),
+  agi_range: z.enum(['under_30k', '30k_60k', '60k_100k', 'over_100k']).optional(),
+  first_generation: z.boolean().optional(),
+  ethnicity: z.array(z.string()).optional()
+});
 
 interface ProfilePayload {
   personal?: {
@@ -134,13 +180,6 @@ export async function POST(req: Request) {
   const parsed = Number(trimmed);
   return Number.isNaN(parsed) ? null : parsed.toString();
 };
-
-  const normalizeText = (value?: string | null) => {
-    if (value === undefined) return undefined;
-    if (value === null) return null;
-    const trimmed = value.trim();
-    return trimmed.length ? trimmed : null;
-  };
 
   let dbStep = 'start';
 
@@ -305,4 +344,82 @@ export async function POST(req: Request) {
     logDbError(error, dbStep, userId);
     return NextResponse.json({ error: 'Failed to save profile' }, { status: 500 });
   }
+}
+
+export async function PUT(req: NextRequest) {
+  const { userId } = await auth();
+  if (!userId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const body = await req.json();
+  const parsed = profileUpdateSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: 'Validation failed', issues: parsed.error.issues },
+      { status: 400 }
+    );
+  }
+
+  const supabase = createSupabaseServerClient(userId);
+  const { data: userRow, error: userError } = await supabase
+    .from('users')
+    .select('id, email')
+    .eq('clerk_id', userId)
+    .maybeSingle();
+
+  if (userError) {
+    return NextResponse.json({ error: 'Failed to fetch user' }, { status: 500 });
+  }
+
+  if (!userRow) {
+    return NextResponse.json({ error: 'User not found' }, { status: 404 });
+  }
+
+  const payload = parsed.data;
+  const normalizeNumber = (value?: number | null) => {
+    if (value === undefined) return undefined;
+    if (value === null) return null;
+    return Number.isNaN(value) ? null : value;
+  };
+
+  const profilePayload = {
+    user_id: userRow.id,
+    first_name: normalizeText(payload.first_name),
+    last_name: normalizeText(payload.last_name),
+    email: normalizeText(payload.email ?? userRow.email),
+    phone: normalizeText(payload.phone),
+    street_address: normalizeText(payload.street_address),
+    city: normalizeText(payload.city),
+    state: normalizeText(payload.state),
+    zip: normalizeText(payload.zip),
+    high_school: normalizeText(payload.high_school),
+    graduation_year: normalizeNumber(payload.graduation_year),
+    gpa: normalizeNumber(payload.gpa),
+    weighted_gpa: normalizeNumber(payload.weighted_gpa),
+    sat_score: normalizeNumber(payload.sat_score),
+    act_score: normalizeNumber(payload.act_score),
+    class_rank: normalizeText(payload.class_rank),
+    gender: normalizeText(payload.gender),
+    agi_range: normalizeText(payload.agi_range),
+    first_generation: payload.first_generation ?? undefined,
+    ethnicity: payload.ethnicity?.length ? payload.ethnicity : payload.ethnicity ?? undefined,
+    updated_at: new Date().toISOString()
+  };
+
+  const cleanedPayload = Object.fromEntries(
+    Object.entries(profilePayload).filter(([, value]) => value !== undefined)
+  );
+
+  const { data: profileRow, error: profileError } = await supabase
+    .from('profiles')
+    .upsert(cleanedPayload, { onConflict: 'user_id' })
+    .select('*')
+    .single();
+
+  if (profileError) {
+    return NextResponse.json({ error: 'Failed to save profile' }, { status: 500 });
+  }
+
+  return NextResponse.json({ success: true, data: profileRow });
 }
