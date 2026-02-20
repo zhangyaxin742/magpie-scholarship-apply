@@ -1,7 +1,14 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { motion, useAnimation, useMotionValue, useReducedMotion, useTransform } from 'framer-motion';
+import { useEffect, useMemo, useState } from 'react';
+import {
+  animate,
+  motion,
+  useAnimation,
+  useMotionValue,
+  useReducedMotion,
+  useTransform
+} from 'framer-motion';
 import { Calendar, Check, X } from 'lucide-react';
 
 import { Button } from '@/app/components/ui/button';
@@ -43,6 +50,12 @@ export function ScholarshipCard({
   const positiveOpacity = useTransform(dragX, [0, 100], [0, 0.7]);
   const negativeOpacity = useTransform(dragX, [-100, 0], [0.7, 0]);
   const [isAnimating, setIsAnimating] = useState(false);
+
+  useEffect(() => {
+    if (!isTop) return;
+    dragX.set(0);
+    controls.set({ scale: 1, y: 0, opacity: 1 });
+  }, [controls, isTop]);
 
   const amountLabel = scholarship.amount
     ? currencyFormatter.format(scholarship.amount)
@@ -106,6 +119,12 @@ export function ScholarshipCard({
     resume: scholarship.requiresResume
   };
 
+  const animateDragX = (to: number, duration: number) =>
+    animate(dragX, to, {
+      duration: shouldReduceMotion ? 0 : duration,
+      ease: 'easeOut'
+    }).finished;
+
   const animateOff = async (direction: 'left' | 'right') => {
     if (isAnimating) return;
     setIsAnimating(true);
@@ -113,11 +132,11 @@ export function ScholarshipCard({
       direction === 'right' ? onAdd() : onReject();
       return;
     }
-    await controls.start({
-      x: direction === 'right' ? 700 : -700,
-      opacity: 0,
-      transition: { duration: 0.3, ease: 'easeOut' }
-    });
+    const targetX = direction === 'right' ? 700 : -700;
+    await Promise.all([
+      animateDragX(targetX, 0.3),
+      controls.start({ opacity: 0, transition: { duration: 0.3, ease: 'easeOut' } })
+    ]);
     direction === 'right' ? onAdd() : onReject();
   };
 
@@ -131,7 +150,7 @@ export function ScholarshipCard({
       animateOff('left');
       return;
     }
-    controls.start({ x: 0, transition: { duration: 0.2, ease: 'easeOut' } });
+    animateDragX(0, 0.2);
   };
 
   return (
@@ -255,10 +274,20 @@ export function ScholarshipCard({
       </div>
 
       <div className="flex items-center justify-between border-t border-slate-100 px-6 py-4">
-        <Button variant="outline" onClick={() => animateOff('left')} aria-label="Pass scholarship">
+        <Button
+          variant="outline"
+          className="border-red-200 text-red-500 hover:bg-red-50"
+          onClick={() => animateOff('left')}
+          aria-label="Pass scholarship"
+        >
           <X className="h-4 w-4" /> Pass
         </Button>
-        <Button variant="outline" onClick={onMoreInfo} aria-label="More info">
+        <Button
+          variant="outline"
+          className="border-slate-200 text-slate-600 hover:bg-slate-50"
+          onClick={onMoreInfo}
+          aria-label="More info"
+        >
           ℹ More Info
         </Button>
         <Button onClick={() => animateOff('right')} aria-label="Add to cart">

@@ -107,8 +107,11 @@ export const scholarships = pgTable('scholarships', {
   essay_word_count: integer('essay_word_count'),
   requires_recommendation: boolean('requires_recommendation').default(false),
   requires_transcript: boolean('requires_transcript').default(false),
+  required_athletics: text('required_athletics').array(),
+  required_ec_categories: text('required_ec_categories').array(),
   requires_resume: boolean('requires_resume').default(false),
   source: text('source'),
+  source_url: text('source_url'),
   last_verified: timestamp('last_verified', { withTimezone: true }),
   is_active: boolean('is_active').default(true),
   competition_level: text('competition_level'),
@@ -116,6 +119,7 @@ export const scholarships = pgTable('scholarships', {
   created_at: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updated_at: timestamp('updated_at', { withTimezone: true }).defaultNow()
 }, (table) => ({
+  location_idx: index('idx_scholarships_location').on(table.states, table.cities),
   deadline_idx: index('idx_scholarships_deadline').on(table.deadline),
   active_idx: index('idx_scholarships_active').on(table.is_active),
   amount_idx: index('idx_scholarships_amount').on(table.amount),
@@ -140,6 +144,24 @@ export const user_scholarships = pgTable('user_scholarships', {
   user_status_idx: index('idx_user_scholarships_user_status').on(table.user_id, table.status),
   deadline_idx: index('idx_user_scholarships_deadline').on(table.scholarship_id, table.added_to_cart_at),
   unique_idx: uniqueIndex('user_scholarships_user_id_scholarship_id_key').on(table.user_id, table.scholarship_id)
+}));
+
+export const scholarships_pending = pgTable('scholarships_pending', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  source_url: text('source_url').notNull(),
+  raw_page_text: text('raw_page_text'),
+  extracted_data: jsonb('extracted_data'),
+  extraction_model: text('extraction_model'),
+  extraction_confidence: decimal('extraction_confidence', { precision: 3, scale: 2 }),
+  status: text('status').default('pending'),
+  reviewer_notes: text('reviewer_notes'),
+  reviewed_by: text('reviewed_by'),
+  reviewed_at: timestamp('reviewed_at', { withTimezone: true }),
+  scholarship_id: uuid('scholarship_id').references(() => scholarships.id),
+  created_at: timestamp('created_at', { withTimezone: true }).defaultNow()
+}, (table) => ({
+  status_idx: index('idx_pending_status').on(table.status),
+  source_idx: index('idx_pending_source').on(table.source_url)
 }));
 
 export const extension_events = pgTable('extension_events', {
@@ -175,3 +197,6 @@ export type NewUserScholarship = typeof user_scholarships.$inferInsert;
 
 export type ExtensionEvent = typeof extension_events.$inferSelect;
 export type NewExtensionEvent = typeof extension_events.$inferInsert;
+
+export type ScholarshipPending = typeof scholarships_pending.$inferSelect;
+export type NewScholarshipPending = typeof scholarships_pending.$inferInsert;

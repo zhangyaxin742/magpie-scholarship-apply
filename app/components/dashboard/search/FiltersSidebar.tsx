@@ -29,13 +29,15 @@ export function FiltersSidebar({
   onClear
 }: FiltersSidebarProps) {
   const [draftFilters, setDraftFilters] = useState<SearchFilters>(filters);
+  const [draftRequirements, setDraftRequirements] = useState<RequirementFilters>(requirements);
   const didMount = useRef(false);
   const isSyncing = useRef(false);
 
   useEffect(() => {
     isSyncing.current = true;
     setDraftFilters(filters);
-  }, [filters]);
+    setDraftRequirements(requirements);
+  }, [filters, requirements]);
 
   useEffect(() => {
     if (!didMount.current) {
@@ -48,9 +50,10 @@ export function FiltersSidebar({
     }
     const timer = window.setTimeout(() => {
       onChange(draftFilters);
+      onRequirementsChange(draftRequirements);
     }, 300);
     return () => window.clearTimeout(timer);
-  }, [draftFilters, onChange]);
+  }, [draftFilters, draftRequirements, onChange, onRequirementsChange]);
 
   return (
     <div className="space-y-6">
@@ -160,36 +163,36 @@ export function FiltersSidebar({
           <div className="space-y-2 text-sm text-slate-600">
             <label className="flex items-center gap-2">
               <Checkbox
-                checked={requirements.noEssay}
+                checked={draftRequirements.noEssay}
                 onCheckedChange={(checked) =>
-                  onRequirementsChange({
-                    ...requirements,
+                  setDraftRequirements((prev) => ({
+                    ...prev,
                     noEssay: Boolean(checked)
-                  })
+                  }))
                 }
               />
               No Essay Required
             </label>
             <label className="flex items-center gap-2">
               <Checkbox
-                checked={requirements.noRecommendation}
+                checked={draftRequirements.noRecommendation}
                 onCheckedChange={(checked) =>
-                  onRequirementsChange({
-                    ...requirements,
+                  setDraftRequirements((prev) => ({
+                    ...prev,
                     noRecommendation: Boolean(checked)
-                  })
+                  }))
                 }
               />
               No Rec Letter
             </label>
             <label className="flex items-center gap-2">
               <Checkbox
-                checked={requirements.hasEssayPrompt}
+                checked={draftRequirements.hasEssayPrompt}
                 onCheckedChange={(checked) =>
-                  onRequirementsChange({
-                    ...requirements,
+                  setDraftRequirements((prev) => ({
+                    ...prev,
                     hasEssayPrompt: Boolean(checked)
-                  })
+                  }))
                 }
               />
               Has Essay Prompt

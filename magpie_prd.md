@@ -304,7 +304,7 @@ User adds scholarship to cart →
 
 ### Scholarship Discovery Pipeline (Local Scholarships)
 
-The scholarship data layer uses a **three-tier hybrid approach** to maximize coverage while keeping hallucination risk near zero. The core principle: LLMs are used to *read and extract from real pages*, never to *generate* scholarship information from memory.
+The scholarship data layer uses a **three-tier hybrid approach** with a two-model AI sequence: **Gemini Flash for discovery, Claude Haiku for extraction.** The design principle: use Google's live search index to find real URLs (not model recall), then use a cheap fast model to read those pages and pull structured data. Neither model invents facts.
 
 **Tier 1 — Manual Seed Database:**
 - Manually curate 50–100 verified local scholarships before any automation
@@ -313,21 +313,42 @@ The scholarship data layer uses a **three-tier hybrid approach** to maximize cov
 
 **Tier 2 — Targeted Playwright Scraper:**
 - **Tool:** Playwright (headless browser)
-- **Targets:** Known high-yield sources — county community foundations, state higher-ed commission scholarship pages, Rotary/Lions/Kiwanis chapter sites, high school counselor pages
+- **Targets:** Known high-yield sources — county community foundations, state higher-ed commission pages, Rotary/Lions/Kiwanis chapter sites, high school counselor pages
 - **Frequency:** Weekly cron job
-- **Storage:** Raw HTML/text saved to staging table pending extraction
+- **Storage:** Raw page text saved to `scholarships_pending` staging table
 
-**Tier 3 — AI-Assisted Extraction & Discovery:**
-- **Search API:** Tavily API (or Perplexity API) used to *discover* new scholarship pages by region — the model finds URLs, not facts
-- **Extraction LLM:** Claude Haiku (low cost, fast) reads scraped page content and pulls structured fields: name, organization, amount, deadline, eligibility criteria, URL
-- **Hallucination mitigation:** The LLM is grounded to the actual page text — it cannot invent scholarships that don't exist on the page. Source URL is always stored alongside extracted data.
-- **Human review gate:** AI-extracted scholarships land in a `scholarships_pending` staging table and require admin approval before going live in the main `scholarships` table
-- **Cost estimate:** ~$0.001–0.003 per scholarship extracted with Haiku; discovery queries via Tavily ~$0.01/search
+**Tier 3 — Two-Model AI Pipeline:**
+
+*Step A — Discovery (Gemini Flash 2.0 + Google Search Grounding):*
+- **Model:** `gemini-2.0-flash` via Google AI Studio API (`@google/generative-ai`)
+- **Grounding:** Google Search grounding tool enabled — Gemini queries Google's live index, not its training memory
+- **Input:** Student profile attributes (city, state, GPA range, demographics, graduation year) + search intent
+- **Prompt pattern:** `"Find scholarship opportunities available to students in {city}, {state} with GPA around {gpa}. Include local community foundations, civic organizations, and regional programs. Return only real URLs you found via search."`
+- **Output:** Gemini returns cited URLs with source grounding metadata — these are real pages from Google's index
+- **What it does NOT do:** Generate scholarship details from memory — it only surfaces URLs
+
+*Step B — Extraction (Claude Haiku):*
+- **Model:** `claude-haiku-4-5` via existing Anthropic API key (same key as PDF parser)
+- **Input:** Raw page text fetched by Playwright from each Gemini-discovered URL
+- **Prompt:** Structured extraction — pull name, organization, amount, deadline, eligibility requirements, application URL from page content only
+- **Grounding:** Haiku is explicitly instructed to extract only what is present in the provided text, never infer or complete missing fields
+- **Output:** Structured JSON matching `scholarships` table schema
+- **On failure/low confidence:** Flag record as `needs_review` in `scholarships_pending`
+
+*Human Review Gate:*
+- All AI-extracted records land in `scholarships_pending` with `status = 'pending'`
+- Admin approves/rejects before any record goes live in `scholarships`
+- `source_url` always stored as audit trail — every approved scholarship links back to its source page
+
+**Cost estimate:**
+- Gemini Flash with grounding: free tier covers MVP volume; ~$0.0001/query at paid scale
+- Haiku extraction: ~$0.001–0.003 per scholarship page processed
+- Total per discovery run: well under $0.10 for a regional sweep
 
 **Data Refresh:**
-- Cron runs Tier 2 scraper weekly
-- Tier 3 extraction triggered on new/changed pages
-- Stale scholarship detection: flag records where `deadline` has passed or page returns 404
+- Cron runs Tier 2 + Tier 3 pipeline weekly
+- Gemini re-queries for each active geographic region
+- Stale detection: flag records where `deadline` has passed or Playwright gets a 404
 
 **Manual Curation:** Always the starting point for each new geographic area expanded into
 
@@ -830,25 +851,27 @@ LIMIT 50;
 **Discovery Pipeline Flow (how scholarships enter the DB):**
 
 ```
-[Tavily/Perplexity Search API]
-  "scholarships [county] [state] 2026 site:*.org"
+[Gemini Flash 2.0 + Google Search Grounding]
+  Input: student profile attributes (city, state, GPA, demographics)
+  Prompt: "Find real scholarship URLs for students in {city}, {state}..."
+  Grounding: queries Google's live index — returns cited, real URLs only
           │
-          ▼ Returns URLs of candidate pages
+          ▼ Returns verified URLs with source citations
 [Playwright Scraper]
-  Fetches page HTML → extracts raw text
+  Fetches each URL → extracts raw page text
           │
           ▼ raw_page_text stored in scholarships_pending
 [Claude Haiku Extraction]
   Reads raw text, outputs structured JSON:
   { name, organization, amount, deadline, eligibility, url }
-  Grounded to page content only — no recall from training
+  Grounded to page content only — explicitly instructed not to infer missing fields
           │
           ▼ extracted_data + source_url stored in scholarships_pending
 [Admin Review Queue]
   Human approves / rejects / flags needs_review
           │
           ▼ On approval: INSERT into scholarships, link scholarship_id
-[Live in DB → SQL Matching → User Feed]
+[Live in DB → SQL Matching → Haiku Ranking → User Feed]
 ```
 
 ### 7.4 Cart & Application Flow
@@ -1879,16 +1902,18 @@ function autofillField(element, value) {
 **Goals:**
 - [ ] Manually curate and verify 50–100 local scholarships (Tier 1 seed)
 - [ ] Build targeted Playwright scraper for known source types (community foundations, state higher-ed pages, Rotary/Lions chapters)
-- [ ] Integrate Tavily API for URL discovery by region
-- [ ] Build Claude Haiku extraction pipeline: raw page text → structured JSON
+- [ ] Integrate Gemini Flash 2.0 (Google AI Studio API) for URL discovery by region using Google Search grounding
+- [ ] Build Claude Haiku extraction pipeline: Playwright raw text → structured JSON
+- [ ] Wire the two-model sequence: Gemini discovers URLs → Playwright fetches → Haiku extracts → pending queue
 - [ ] Build `scholarships_pending` admin review queue (simple internal UI or direct DB access for MVP)
+- [ ] Run `scholarships_pending` migration in Supabase (schema defined in Section 6)
 - [ ] Set up weekly cron job for Tier 2 + Tier 3 refresh
 - [ ] Verify extraction accuracy against manually-entered ground truth
 
 **Deliverables:**
 - 50+ verified scholarships in `scholarships` table
 - Scraper working for 5+ site types
-- AI extraction pipeline live (Tavily → Playwright → Haiku → pending queue)
+- Two-model pipeline live: Gemini (discovery) → Playwright (fetch) → Haiku (extraction) → pending queue
 - Admin can approve/reject extracted scholarships
 - Data refresh cron job running
 
@@ -2023,8 +2048,9 @@ function autofillField(element, value) {
 | **Monitoring** | Vercel Analytics, Sentry | Web Vitals, error tracking |
 | **PDF Parsing** | pdf-parse | Free, fast, predictable |
 | **Web Scraping** | Playwright | Headless browser automation |
-| **Search Discovery** | Tavily API | Find scholarship page URLs by region; grounded search, not LLM recall |
-| **AI Extraction** | Claude Haiku (Anthropic API) | Extract structured fields from scraped page text; ~$0.001–0.003/scholarship |
+| **Scholarship Discovery** | Gemini Flash 2.0 (Google AI Studio API, `@google/generative-ai`) | Google Search grounding finds real scholarship URLs via live index — not model recall |
+| **Scholarship Extraction** | Claude Haiku (Anthropic API — same key as PDF parser) | Reads scraped page text, outputs structured JSON; ~$0.001–0.003/page |
+| **In-Feed Matching/Ranking** | Claude Haiku (Anthropic API) | Ranks SQL-filtered candidate pool by profile fit; called once per search request |
 
 ---
 
@@ -2037,7 +2063,7 @@ function autofillField(element, value) {
 | `/api/essays` | GET/POST/PUT/DELETE | CRUD essays |
 | `/api/activities` | GET/POST/PUT/DELETE | CRUD activities |
 | `/api/scholarships/search` | GET | Search scholarships (with filters) |
-| `/api/scholarships/discover` | POST | Trigger Tavily discovery for a region → queues Playwright + Haiku extraction |
+| `/api/scholarships/discover` | POST | Trigger Gemini-grounded discovery for a region → queues Playwright fetch + Haiku extraction |
 | `/api/admin/pending` | GET | List scholarships_pending records for review |
 | `/api/admin/pending/:id/approve` | POST | Approve extracted scholarship → moves to live table |
 | `/api/admin/pending/:id/reject` | POST | Reject extracted scholarship |
@@ -2052,8 +2078,9 @@ function autofillField(element, value) {
 | Risk | Likelihood | Impact | Mitigation |
 |------|-----------|--------|------------|
 | PDF parsing fails for >20% of users | Medium | High | Build robust manual entry fallback, test on diverse PDFs |
-| Can't scrape enough local scholarships | Medium | Critical | Three-tier pipeline (manual seed → Playwright → AI extraction via Tavily + Haiku) mitigates single point of failure; manual curation always available as floor |
-| AI extraction hallucinates scholarship data | Low | High | LLM is grounded to scraped page text, not training memory; source_url always stored; human review gate before any record goes live |
+| Can't scrape enough local scholarships | Medium | Critical | Three-tier pipeline (manual seed → Playwright → Gemini discovery + Haiku extraction) mitigates single point of failure; manual curation always available as floor |
+| AI extraction hallucinates scholarship data | Low | High | Gemini uses live Google Search grounding (not model recall) for URLs; Haiku reads scraped page text only; source_url always stored; human review gate before any record goes live |
+| Gemini grounding returns stale or irrelevant URLs | Low | Medium | Playwright validates each URL before extraction; 404s and parse failures flagged as needs_review in scholarships_pending |
 | Users don't complete onboarding | High | High | Make PDF import dead simple, show value immediately |
 | Scholarship data goes stale | Medium | Medium | Build refresh cron job, user reporting |
 | Users don't actually apply | Medium | High | Add tracking, reminders, make application easier |
@@ -2078,6 +2105,7 @@ function autofillField(element, value) {
 |---------|------|--------|---------|
 | 1.0 | 2026-02-14 | Engineering Team | Initial PRD for MVP |
 | 1.1 | 2026-02-19 | Engineering Team | Revised scholarship discovery pipeline: three-tier hybrid (manual seed + Playwright scraper + Tavily/Haiku AI extraction); added `scholarships_pending` staging table and admin review workflow; expanded eligibility schema (athletics, EC categories); updated matching algorithm, API endpoints, risk register, and tech stack |
+| 1.2 | 2026-02-20 | Engineering Team | Replaced Tavily with Gemini Flash 2.0 + Google Search grounding for URL discovery; Haiku retained for page extraction; added third risk row for grounding URL quality; updated tech stack table, Phase 4 goals, pipeline flow diagram, and API endpoint description |
 
 ---
 

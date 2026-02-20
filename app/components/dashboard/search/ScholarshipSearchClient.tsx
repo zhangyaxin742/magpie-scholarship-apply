@@ -193,6 +193,7 @@ export function ScholarshipSearchClient({
       });
       const currentCards = useSearchStore.getState().cards;
       setCards([...currentCards, ...data.scholarships], data.nextCursor, data.aiRanked);
+      setLoading(false);
     } catch (error) {
       setLoading(false);
     }
@@ -342,7 +343,7 @@ export function ScholarshipSearchClient({
       </div>
 
       <Dialog open={isFiltersOpen} onOpenChange={setIsFiltersOpen}>
-        <DialogContent className="top-auto bottom-0 w-full max-w-none rounded-t-2xl translate-y-0">
+        <DialogContent className="left-0 right-0 top-auto bottom-0 w-full max-w-none translate-x-0 translate-y-0 rounded-t-2xl">
           <FiltersSidebar
             filters={filters}
             requirements={requirements}

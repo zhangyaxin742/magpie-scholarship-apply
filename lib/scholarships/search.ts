@@ -125,13 +125,13 @@ export async function searchScholarships({
           or(isNull(scholarships.min_gpa), lte(scholarships.min_gpa, gpaValue)),
           or(isNull(scholarships.max_gpa), gte(scholarships.max_gpa, gpaValue))
         )
-      : undefined,
+      : and(isNull(scholarships.min_gpa), isNull(scholarships.max_gpa)),
     graduationYear
       ? and(
           or(isNull(scholarships.min_graduation_year), lte(scholarships.min_graduation_year, graduationYear)),
           or(isNull(scholarships.max_graduation_year), gte(scholarships.max_graduation_year, graduationYear))
         )
-      : undefined,
+      : and(isNull(scholarships.min_graduation_year), isNull(scholarships.max_graduation_year)),
     notInArray(
       scholarships.id,
       db
