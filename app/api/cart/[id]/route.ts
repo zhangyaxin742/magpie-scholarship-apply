@@ -24,7 +24,7 @@ const toDateString = (value: string) => {
   return parsed.toISOString().slice(0, 10);
 };
 
-export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { userId } = await auth();
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
@@ -40,6 +40,8 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   const user = await getUser(userId);
   if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
 
+  const { id } = await params;
+  
   const payload = parsed.data;
   const updates: Record<string, unknown> = { updated_at: new Date() };
 
@@ -61,7 +63,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   const [updated] = await db
     .update(user_scholarships)
     .set(updates)
-    .where(and(eq(user_scholarships.id, params.id), eq(user_scholarships.user_id, user.id)))
+    .where(and(eq(user_scholarships.id, id), eq(user_scholarships.user_id, user.id)))
     .returning();
 
   if (!updated) return NextResponse.json({ error: 'Cart item not found' }, { status: 404 });

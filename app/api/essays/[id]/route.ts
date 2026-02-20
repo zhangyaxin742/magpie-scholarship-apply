@@ -39,13 +39,15 @@ const getUser = async (clerkId: string) =>
 
 const countWords = (text: string) => text.trim().split(/\s+/).filter(Boolean).length;
 
-export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { userId } = await auth();
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const user = await getUser(userId);
   if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
 
+  const { id } = await params;
+  
   const body = await req.json();
   const parsed = essayUpdateSchema.safeParse(body);
   if (!parsed.success) {
@@ -79,7 +81,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   const [updated] = await db
     .update(essays)
     .set(updates)
-    .where(and(eq(essays.id, params.id), eq(essays.user_id, user.id)))
+    .where(and(eq(essays.id, id), eq(essays.user_id, user.id)))
     .returning();
 
   if (!updated) return NextResponse.json({ error: 'Essay not found' }, { status: 404 });
@@ -87,16 +89,18 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   return NextResponse.json(updated);
 }
 
-export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { userId } = await auth();
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const user = await getUser(userId);
   if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
 
+  const { id } = await params;
+
   const [deleted] = await db
     .delete(essays)
-    .where(and(eq(essays.id, params.id), eq(essays.user_id, user.id)))
+    .where(and(eq(essays.id, id), eq(essays.user_id, user.id)))
     .returning({ id: essays.id });
 
   if (!deleted) return NextResponse.json({ error: 'Essay not found' }, { status: 404 });

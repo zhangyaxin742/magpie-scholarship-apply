@@ -29,12 +29,14 @@ const getUser = async (clerkId: string) =>
     where: (u, { eq }) => eq(u.clerk_id, clerkId)
   });
 
-export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { userId } = await auth();
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const user = await getUser(userId);
   if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
+
+  const { id } = await params;
 
   const body = await req.json();
   const parsed = activityUpdateSchema.safeParse(body);
@@ -72,7 +74,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   const [updated] = await db
     .update(activities)
     .set(updates)
-    .where(and(eq(activities.id, params.id), eq(activities.user_id, user.id)))
+    .where(and(eq(activities.id, id), eq(activities.user_id, user.id)))
     .returning();
 
   if (!updated) return NextResponse.json({ error: 'Activity not found' }, { status: 404 });
@@ -80,16 +82,18 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   return NextResponse.json(updated);
 }
 
-export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { userId } = await auth();
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const user = await getUser(userId);
   if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
 
+  const { id } = await params;
+
   const [deleted] = await db
     .delete(activities)
-    .where(and(eq(activities.id, params.id), eq(activities.user_id, user.id)))
+    .where(and(eq(activities.id, id), eq(activities.user_id, user.id)))
     .returning({ id: activities.id });
 
   if (!deleted) return NextResponse.json({ error: 'Activity not found' }, { status: 404 });
