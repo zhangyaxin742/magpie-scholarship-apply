@@ -6,6 +6,56 @@ import { activities, essays, profiles, users } from '@/lib/db/schema';
 import { truncateAtWord } from '@/lib/utils/text';
 import type { PreferencesData } from '@/lib/onboarding/types';
 
+const extractPgErrorDetails = (error: unknown) => {
+  const candidate = (error && typeof error === 'object' ? error : null) as
+    | Record<string, unknown>
+    | null;
+  const maybePgError =
+    candidate?.cause && typeof candidate.cause === 'object'
+      ? (candidate.cause as Record<string, unknown>)
+      : candidate;
+
+  if (!maybePgError) return null;
+
+  const keys = [
+    'code',
+    'detail',
+    'hint',
+    'constraint',
+    'table',
+    'column',
+    'schema',
+    'severity',
+    'where',
+    'position',
+    'message',
+    'routine'
+  ];
+
+  const details: Record<string, unknown> = {};
+  for (const key of keys) {
+    if (maybePgError[key] !== undefined) {
+      details[key] = maybePgError[key];
+    }
+  }
+
+  if (maybePgError.query !== undefined) details.query = maybePgError.query;
+  if (maybePgError.statement !== undefined) details.statement = maybePgError.statement;
+  if (maybePgError.parameters !== undefined) details.parameters = maybePgError.parameters;
+
+  return Object.keys(details).length ? details : null;
+};
+
+const logDbError = (error: unknown, step: string, userId?: string | null) => {
+  const details = extractPgErrorDetails(error);
+  console.error('Profile save error:', {
+    step,
+    userId,
+    details,
+    error
+  });
+};
+
 interface ProfilePayload {
   personal?: {
     firstName: string;
@@ -93,7 +143,9 @@ export async function POST(req: Request) {
   };
 
   try {
+    let dbStep = 'start';
     await db.transaction(async (tx) => {
+      dbStep = 'users_upsert';
       const [userRow] = await tx
         .insert(users)
         .values({
@@ -163,6 +215,7 @@ assign('weighted_gpa', toDecimalString(body.academic.weightedGpa));
       }
 
       if (Object.keys(profileSet).length > 0) {
+        dbStep = 'profiles_upsert';
         await tx
           .insert(profiles)
           .values(profileValues)
@@ -170,6 +223,7 @@ assign('weighted_gpa', toDecimalString(body.academic.weightedGpa));
       }
 
       if (Array.isArray(body.activities)) {
+        dbStep = 'activities_delete';
         await tx.delete(activities).where(eq(activities.user_id, dbUserId));
         const normalizedActivities = body.activities
           .map((activity) => {
@@ -199,11 +253,13 @@ assign('weighted_gpa', toDecimalString(body.academic.weightedGpa));
           .filter(Boolean) as Array<typeof activities.$inferInsert>;
 
         if (normalizedActivities.length) {
+          dbStep = 'activities_insert';
           await tx.insert(activities).values(normalizedActivities);
         }
       }
 
       if (Array.isArray(body.essays)) {
+        dbStep = 'essays_delete';
         await tx.delete(essays).where(eq(essays.user_id, dbUserId));
         const normalizedEssays = body.essays
           .map((essay) => {
@@ -221,18 +277,20 @@ assign('weighted_gpa', toDecimalString(body.academic.weightedGpa));
           .filter(Boolean) as Array<typeof essays.$inferInsert>;
 
         if (normalizedEssays.length) {
+          dbStep = 'essays_insert';
           await tx.insert(essays).values(normalizedEssays);
         }
       }
 
       if (body.markOnboardingComplete) {
+        dbStep = 'users_onboarding_update';
         await tx.update(users).set({ onboarding_completed: true }).where(eq(users.id, dbUserId));
       }
     });
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Profile save error:', error);
+    logDbError(error, 'transaction_failed', userId);
     return NextResponse.json({ error: 'Failed to save profile' }, { status: 500 });
   }
 }
