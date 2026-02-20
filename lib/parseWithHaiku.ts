@@ -5,6 +5,8 @@ const MODEL = 'claude-3-haiku-20240307';
 const INPUT_COST_PER_MILLION = 1;
 const OUTPUT_COST_PER_MILLION = 5;
 
+export const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
 export interface HaikuUsage {
   inputTokens: number;
   outputTokens: number;
@@ -144,7 +146,6 @@ export async function parseWithHaiku(pdfText: string): Promise<HaikuParseResult>
     throw new Error('No text content available for parsing');
   }
 
-  const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
   const message = await anthropic.messages.create({
     model: MODEL,
     max_tokens: 4096,
