@@ -13,22 +13,13 @@ import {
 } from 'drizzle-orm';
 
 import { db } from '@/lib/db';
-import { activities, essays, profiles, scholarships, user_scholarships, users } from '@/lib/db/schema';
+import { profiles, scholarships, user_scholarships, users } from '@/lib/db/schema';
 import { anthropic } from '@/lib/parseWithHaiku';
 import type { ScholarshipSearchResponse, SearchFilters, ScholarshipResult } from '@/lib/scholarships/types';
 
 const MAX_CANDIDATES = 50;
 
-const systemPrompt = `You are a scholarship matching assistant. Given a student's profile and a list of scholarships, rank the scholarships from best to worst match for this specific student. Consider: demographic eligibility (gender, ethnicity, first-gen status, income), geographic proximity (local > state > national), competition level (low competition is better for win probability), essay topic alignment (does the student have relevant essays already written?), and activity alignment (do their ECs match scholarship focus areas?).
-
-Respond ONLY with a valid JSON array of objects. No explanation, no markdown, no preamble. Each object must have exactly two fields:
-  id: the scholarship UUID (string)
-  reason: one concise sentence (max 15 words) explaining why this is a strong match for THIS student specifically`;
-
-type RankedScholarship = {
-  id: string;
-  reason: string;
-};
+const systemPrompt = `You are a scholarship matching assistant. Rank the provided scholarships by relevance to the student profile. Return ONLY a valid JSON array of scholarship IDs in ranked order — most relevant first. No explanation, no markdown, no other text.`;
 
 export class ScholarshipSearchError extends Error {
   status: number;
@@ -41,7 +32,7 @@ export class ScholarshipSearchError extends Error {
 
 const toDate = (value: Date | string): Date => (value instanceof Date ? value : new Date(value));
 
-const extractJsonArray = (text: string): RankedScholarship[] => {
+const extractJsonArray = (text: string): string[] => {
   const trimmed = text.trim();
   if (!trimmed) throw new Error('Claude returned empty response');
   const withoutFences = trimmed.startsWith('```')
@@ -52,14 +43,9 @@ const extractJsonArray = (text: string): RankedScholarship[] => {
   if (firstBracket === -1 || lastBracket === -1 || lastBracket <= firstBracket) {
     throw new Error('Claude returned invalid JSON array');
   }
-  const parsed = JSON.parse(withoutFences.slice(firstBracket, lastBracket + 1)) as RankedScholarship[];
-  if (!Array.isArray(parsed)) {
-    throw new Error('Claude returned invalid JSON array');
-  }
-  return parsed.filter(
-    (item): item is RankedScholarship =>
-      Boolean(item) && typeof item.id === 'string' && typeof item.reason === 'string'
-  );
+  const parsed = JSON.parse(withoutFences.slice(firstBracket, lastBracket + 1));
+  if (!Array.isArray(parsed)) throw new Error('Claude returned invalid JSON array');
+  return parsed.filter((item): item is string => typeof item === 'string');
 };
 
 interface SearchParams {
@@ -95,14 +81,6 @@ export async function searchScholarships({
 
   if (!userRecord) throw new ScholarshipSearchError(404, 'User not found');
   if (!userRecord.profileId) throw new ScholarshipSearchError(404, 'Profile not found');
-
-  const [essayRows, activityRows] = await Promise.all([
-    db.select({ topic: essays.topic }).from(essays).where(eq(essays.user_id, userRecord.userId)),
-    db
-      .select({ title: activities.title })
-      .from(activities)
-      .where(eq(activities.user_id, userRecord.userId))
-  ]);
 
   const today = new Date();
   const todayString = today.toISOString().slice(0, 10);
@@ -227,27 +205,45 @@ export async function searchScholarships({
     .where(and(...conditions))
     .limit(MAX_CANDIDATES);
 
-  const essayTopics = essayRows.map((essay) => essay.topic).filter(Boolean);
-  const activityTitles = activityRows.map((activity) => activity.title).filter(Boolean);
-
-  const userContext = `Student profile:\n- Location: ${userRecord.city ?? 'not provided'}, ${userRecord.state ?? 'not provided'}\n- GPA: ${gpaValue ?? 'not provided'}\n- Graduation year: ${graduationYear ?? 'not provided'}\n- Gender: ${userRecord.gender ?? 'not provided'}\n- Ethnicity: ${userRecord.ethnicity?.join(', ') ?? 'not provided'}\n- First generation: ${userRecord.firstGeneration ? 'yes' : 'no'}\n- Income range: ${userRecord.agiRange ?? 'not provided'}\n- Essays written on topics: ${essayTopics.join(', ') || 'none'}\n- Activities: ${activityTitles.join(', ') || 'none'}`;
-
-  const scholarshipListString = candidates
-    .map((scholarship) => {
-      const deadlineValue = scholarship.deadline
-        ? toDate(scholarship.deadline).toISOString().split('T')[0]
-        : 'unknown';
-      const demographics = scholarship.requiredDemographics?.join(', ') || 'none';
-      return `- id: ${scholarship.id}\n  name: ${scholarship.name}\n  organization: ${scholarship.organization ?? 'not provided'}\n  amount: ${scholarship.amount ?? 'not provided'}\n  deadline: ${deadlineValue}\n  competitionLevel: ${scholarship.competitionLevel ?? 'not provided'}\n  estimatedApplicants: ${scholarship.estimatedApplicants ?? 'not provided'}\n  requiresEssay: ${scholarship.requiresEssay ? 'yes' : 'no'}\n  requiredDemographics: ${demographics}\n  shortDescription: ${scholarship.shortDescription ?? 'not provided'}`;
-    })
-    .join('\n\n');
+  if (candidates.length === 0) {
+    return {
+      scholarships: [],
+      nextCursor: null,
+      totalCount: 0,
+      aiRanked: true
+    };
+  }
 
   let aiRanked = true;
   let rankedResults = candidates;
-  const matchReasonMap = new Map<string, string>();
 
   if (candidates.length > 0) {
     try {
+      const studentProfile = {
+        gpa: userRecord.gpa ? Number(userRecord.gpa) : null,
+        city: userRecord.city,
+        state: userRecord.state,
+        graduationYear: userRecord.graduationYear,
+        gender: userRecord.gender,
+        ethnicity: userRecord.ethnicity,
+        firstGeneration: userRecord.firstGeneration,
+        agiRange: userRecord.agiRange
+      };
+
+      const scholarshipsPayload = candidates.map((scholarship) => ({
+        id: scholarship.id,
+        name: scholarship.name,
+        amount: scholarship.amount,
+        deadline: scholarship.deadline,
+        competitionLevel: scholarship.competitionLevel,
+        estimatedApplicants: scholarship.estimatedApplicants,
+        isNational: scholarship.isNational,
+        states: scholarship.states,
+        cities: scholarship.cities,
+        requiredDemographics: scholarship.requiredDemographics,
+        minGpa: scholarship.minGpa
+      }));
+
       const message = await anthropic.messages.create({
         model: 'claude-haiku-4-5',
         max_tokens: 1024,
@@ -256,7 +252,7 @@ export async function searchScholarships({
         messages: [
           {
             role: 'user',
-            content: `Student profile:\n${userContext}\n\nScholarships to rank:\n${scholarshipListString}`
+            content: `STUDENT PROFILE:\n${JSON.stringify(studentProfile)}\n\nRanking criteria (in order of importance):\n1. Geographic proximity: local (city match) > state match > national\n2. GPA fit: closer to min_gpa is better match\n3. Demographic alignment: required_demographics overlap with profile\n4. Deadline urgency: sooner deadlines ranked higher among similar matches\n5. Competition level: lower competition ranked higher among equal matches\n\nSCHOLARSHIPS:\n${JSON.stringify(scholarshipsPayload)}`
           }
         ]
       });
@@ -266,12 +262,11 @@ export async function searchScholarships({
 
       const ranking = extractJsonArray(textBlock.text);
       const candidateMap = new Map(candidates.map((candidate) => [candidate.id, candidate]));
-      ranking.forEach((item) => matchReasonMap.set(item.id, item.reason));
 
       const rankedByAi = ranking
-        .map((item) => candidateMap.get(item.id))
+        .map((id) => candidateMap.get(id))
         .filter((item): item is (typeof candidates)[number] => Boolean(item));
-      const rankedIds = new Set(ranking.map((item) => item.id));
+      const rankedIds = new Set(ranking);
       const remaining = candidates.filter((candidate) => !rankedIds.has(candidate.id));
       rankedResults = [...rankedByAi, ...remaining];
     } catch (error) {
@@ -298,8 +293,7 @@ export async function searchScholarships({
     });
   }
 
-  const limitDefault = cursor ? 5 : 20;
-  const limitValue = Math.min(limit ?? limitDefault, 20);
+  const limitValue = Math.min(limit ?? 5, 20);
   const startIndex = cursor
     ? Math.max(0, rankedResults.findIndex((item) => item.id === cursor) + 1)
     : 0;
@@ -334,7 +328,7 @@ export async function searchScholarships({
       isNational: Boolean(item.isNational),
       isLocal,
       daysUntilDeadline,
-      matchReason: aiRanked ? matchReasonMap.get(item.id) ?? null : null,
+      matchReason: null,
       minGpa: item.minGpa
     };
   });
