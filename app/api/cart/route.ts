@@ -93,14 +93,12 @@ export async function POST(req: NextRequest) {
         user_id: user.id,
         scholarship_id: scholarshipId,
         status: 'in_cart',
-        added_to_cart_at: now,
         updated_at: now
       })
       .onConflictDoUpdate({
         target: [user_scholarships.user_id, user_scholarships.scholarship_id],
         set: {
           status: 'in_cart',
-          added_to_cart_at: now,
           updated_at: now
         }
       });
@@ -114,14 +112,12 @@ export async function POST(req: NextRequest) {
       user_id: user.id,
       scholarship_id: scholarshipId,
       status: 'rejected_by_user',
-      added_to_cart_at: null,
       updated_at: now
     })
     .onConflictDoUpdate({
       target: [user_scholarships.user_id, user_scholarships.scholarship_id],
       set: {
         status: 'rejected_by_user',
-        added_to_cart_at: null,
         updated_at: now
       }
     });

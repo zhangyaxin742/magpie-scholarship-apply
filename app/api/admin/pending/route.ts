@@ -23,11 +23,19 @@ const ensureAdmin = (userId: string) => {
   return adminIds.includes(userId);
 };
 
+const hasPipelineAccess = (req: NextRequest) => {
+  if (!process.env.PIPELINE_SECRET) return false;
+  const authHeader = req.headers.get('authorization');
+  return authHeader === `Bearer ${process.env.PIPELINE_SECRET}`;
+};
+
 export async function GET(req: NextRequest) {
-  const { userId } = await auth();
-  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  if (!ensureAdmin(userId)) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  if (!hasPipelineAccess(req)) {
+    const { userId } = await auth();
+    if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!ensureAdmin(userId)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
   }
 
   const parsed = querySchema.safeParse(Object.fromEntries(req.nextUrl.searchParams.entries()));
