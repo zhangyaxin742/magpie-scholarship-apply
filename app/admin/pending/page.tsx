@@ -85,9 +85,10 @@ const fetchPendingItems = async (
 export default async function AdminPendingPage({
   searchParams
 }: {
-  searchParams?: { status?: string };
+  searchParams?: Promise<{ status?: string }>;
 }) {
-  const initialStatus = normalizeStatus(searchParams?.status);
+  const resolvedSearchParams = (await searchParams) ?? {};
+  const initialStatus = normalizeStatus(resolvedSearchParams.status);
   const pipelineSecret = process.env.PIPELINE_SECRET;
 
   if (!pipelineSecret) {
