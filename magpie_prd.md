@@ -1,8 +1,8 @@
 # Magpie - Product Requirements Document (PRD)
 ## MVP: Scholarship Platform to End All Scholarship Applications
 
-**Version:** 1.0  
-**Last Updated:** February 14, 2026  
+**Version:** 1.5  
+**Last Updated:** February 22, 2026  
 **Status:** Ready for Development  
 **Owner:** Engineering Team
 
@@ -25,7 +25,7 @@ Magpie is a scholarship discovery and application platform designed to solve the
 ## Table of Contents
 
 1. [Problem Statement](#1-problem-statement)
-2. [Solution Overview](#2-solution-overvwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww
+2. [Solution Overview](#2-solution-overview)
 3. [User Personas](#3-user-personas)
 4. [Product Architecture](#4-product-architecture)
 5. [Technical Stack](#5-technical-stack)
@@ -75,6 +75,10 @@ From user research:
 - "I applied to 200+ scholarships on Bold.org. Won nothing." - Sarah J.
 - "Typed 'describe a challenge you've overcome' 47 times." - Marcus T.
 - "Never heard back. Not even a rejection email." - Priya M.
+- "Applied to zero scholarships because the process makes me want to cry." - Reddit, Feb 2026
+
+**Market Size:**
+The U.S. scholarship market awards over $8.2 billion in private aid annually — more than double the amount awarded in 2003. The target user base (college-bound high school juniors and seniors actively seeking scholarships) is approximately 1.5–2 million students per year. The global scholarship management software market was valued at $9.5 billion in 2023 and is growing at 8.5% CAGR.
 
 **Opportunity:** Students will pay with their data/attention for a platform that:
 1. Saves them 30+ hours of repetitive work
@@ -970,62 +974,83 @@ LIMIT 50;
 
 **Route:** `/`
 
-**Key Sections:**
+**Section Order & Background Colors** (must follow Brand Bible exactly):
+
+1. **Nav** — Ghost `#F8FAFC` glassmorphism, blurs on scroll
+2. **Hero** — Abyss `#03045E` (dark)
+3. **Social Proof Strip** — Ghost `#F8FAFC` (light) — logos/stats bar
+4. **Pain Section** — Ink `#0F172A` (dark)
+5. **Solution Intro** — Cloud `#E4EDFF` (light)
+6. **Features Section** — Ghost `#F8FAFC` (light)
+7. **Product Showcase** — Deep `#023E8A` (dark)
+8. **Testimonials** — Cloud `#E4EDFF` (light)
+9. **Final CTA** — Abyss→Deep gradient (dark)
+10. **Footer** — Ink `#0F172A` (dark)
+
+**Key Sections (Content Spec):**
 
 1. **Navigation Bar**
    - Logo + "magpie" wordmark
    - "How it works" link (smooth scroll)
-   - "Get Started" CTA (Clerk SignUpButton)
+   - Announcement pill badge: Cloud `#E4EDFF` bg, Mist `#B8D0F5` border, Current `#17C9D4` dot with pulse animation — e.g. "Now in beta · Sign up free →"
+   - "Get Started" CTA (Clerk SignUpButton) — Magpie Blue `#2462EA`, pill-shaped
 
-2. **Hero Section**
-   - Headline: "Stop applying to, Start winning scholarships"
-   - Subheadline: Value prop (local, no repetition, transparency)
-   - Primary CTA: "Start Finding Money" (Clerk SignUpButton)
-   - Secondary CTA: "See how it works" (scroll to features)
-   - Stats: "$43K avg found", "12 scholarships", "5min setup"
-   - Animated magpie illustration
+2. **Hero Section** (Abyss `#03045E` background)
+   - Headline at 72px DM Serif Display: headline uses single-word colorization technique — exactly one key word in Current `#17C9D4` (e.g. *"Stop applying. Start **winning**."*)
+   - Subheadline: Value prop in Geist 18px — local scholarships, no repetition, transparency
+   - Primary CTA: "Find My Scholarships" (Clerk SignUpButton) — Magpie Blue pill button, white text
+   - Secondary CTA: "See how it works" (scroll link) — transparent pill, Wing `#4A7FD4` border and text
+   - Hero stats strip: "$43K avg found", "20–100 applicants per local scholarship", "5min setup" — in Ghost `#F8FAFC` / Wing text
+   - Product UI mockup / floating card fragments as visual proof (Synccly-style composition — tilted cards escaping a central dashboard mockup, not abstract illustration)
 
-3. **Problem Section** (dark background)
-   - "You know the drill..."
-   - 4 pain points with emojis
-   - "The scholarship game is broken. We're fixing it. 🔧"
+3. **Social Proof Strip** (Ghost `#F8FAFC`)
+   - Thin strip of logos (community foundations, civic orgs) + headline metric badges
 
-4. **Features Section**
+4. **Pain Section** (Ink `#0F172A`)
+   - Lead with specifics: *"You've typed your name and GPA 47 times. That ends now."*
+   - 4 pain points — use numbers that make the point: "20,000–50,000 applicants. Win rate < 0.1%." / "45–60 min per application." / "85% never hear back." / "Local scholarships average 40 applicants. National ones average 40,000."
+
+5. **Solution Intro / Features** (Cloud `#E4EDFF` → Ghost `#F8FAFC`)
    - "How Magpie works"
-   - 3 cards: Import (30s), Local Discovery, Apply (1-click)
-   - Each with icon, step number, description, benefit
+   - 3 cards: Import (30s), Local Discovery, Apply (copy-paste + track)
+   - Each card: border-radius 16px, shadow `0 8px 32px rgba(15,23,42,0.08)`, Geist labels
 
-5. **Social Proof Section**
-   - "Real students, real money"
-   - 3 testimonials with quote, student name, school, amount won
-   - Real-looking (even if placeholder for MVP)
+6. **Product Showcase** (Deep `#023E8A`)
+   - Real Magpie UI screenshots — no lorem ipsum, no generic mockups
+   - Dashboard chrome, scholarship card, cart checklist
 
-6. **Final CTA Section** (gradient background)
-   - "Stop grinding. Start winning. 💰"
-   - Large CTA button: "Get Started Free"
-   - Trust signals: "No credit card • 5min setup • Actually free"
+7. **Testimonials** (Cloud `#E4EDFF`)
+   - Specific outcomes: "Marcus T., Roosevelt High — $4,200 won" format
+   - Current `#17C9D4` accent on won amounts
 
-7. **Footer**
-   - Logo, Privacy/Terms/Contact links
+8. **Final CTA** (Abyss→Deep gradient)
+   - Headline: *"There are local scholarships in your county with fewer than 50 applicants. Here they are."*
+   - CTA button: "Find My Scholarships" — Magpie Blue pill, white text
+   - Trust signals: "No credit card · No data selling · Actually free"
+
+9. **Footer** (Ink `#0F172A`)
+   - Logo, Privacy/Terms/Contact
    - Copyright
 
 **Design Requirements:**
-- Mobile responsive (320px - 1920px)
+- Mobile responsive (320px - 1920px); minimum 20px horizontal padding on mobile
 - Smooth scroll behavior
 - Hover states on all interactive elements
-- Framer Motion animations (floating elements, fade-ins on scroll)
+- Framer Motion: fade-ins on scroll, floating card fragments in hero (opacity ≤ 20% for any looping decorative animation)
 - Accessible (WCAG AA)
+- Dark/light mode toggle NOT shown — respect OS preference automatically
+- No stock photography (no hands-on-keyboard, no diverse-group-smiling images)
 
 **Performance:**
 - Lighthouse score > 90
 - First Contentful Paint < 1.5s
 - Time to Interactive < 3.5s
 
-**Copy Tone:**
-- Direct, conversational, slightly irreverent
-- Avoid corporate jargon
-- Speak to student frustrations directly
-- Use specific numbers ($43K, 47 times, etc.)
+**Copy Tone (per Brand Voice rules):**
+- Lead with reality, not product description
+- Use specific, falsifiable numbers
+- Never write down to students
+- Never use the word "submit" on any button — outcome-oriented labels only ("Find My Scholarships", "I Applied", "Save Essay")
 
 ### 8.2 Onboarding Flow
 
@@ -1445,65 +1470,84 @@ CSV columns:
 
 ### 9.1 Design System
 
-**Color Palette:**
+> **Source of truth:** All design decisions in this section derive from the Magpie Brand & Design Bible v1.0 (February 2026). In any conflict, the Brand Bible wins.
 
-Primary Colors:
-- Blue: `#2563eb` (blue-600)
-- Indigo: `#4f46e5` (indigo-600)
-- Purple: `#7c3aed` (purple-600)
+**Color Palette — 10-Token System:**
 
-Neutral Colors:
-- Slate 50: `#f8fafc` (backgrounds)
-- Slate 600: `#475569` (body text)
-- Slate 900: `#0f172a` (headings)
+| Token | Hex | Semantic Role | Never Use For |
+|---|---|---|---|
+| **Ink** | `#0F172A` | Darkest text; dark-mode page surface; all body copy (light mode) | Light text on light backgrounds |
+| **Abyss** | `#03045E` | Dark hero sections; dark section backgrounds | Body text at small sizes on dark surfaces |
+| **Deep** | `#023E8A` | Secondary brand navy; dark cards; gradient endpoints | CTA buttons; body text on white |
+| **Magpie Blue** | `#2462EA` | **PRIMARY** — all CTAs, active states, key interactive UI | Deep `#023E8A` backgrounds (insufficient contrast) |
+| **Wing** | `#4A7FD4` | Hover states; secondary labels; secondary text in dark mode | CTA button backgrounds (signals "secondary") |
+| **Sky** | `#7EB3F5` | Decorative fills only | **NEVER text** (contrast fails WCAG AA) |
+| **Mist** | `#B8D0F5` | Borders; subtle backgrounds; secondary dividers | Primary text |
+| **Cloud** | `#E4EDFF` | Section backgrounds; card tints; ghost button hover | Current `#17C9D4` text on Cloud (contrast 2.8:1 — fails) |
+| **Ghost** | `#F8FAFC` | Default page background; light surfaces | — |
+| **Current** | `#17C9D4` | **SINGLE ACCENT** — badges, "won" indicators, editorial word highlights; use sparingly; one per section | More than one per section; text on Cloud backgrounds |
 
-Accent Colors:
-- Green: `#16a34a` (success, "won" status)
-- Red: `#dc2626` (danger, deadlines)
-- Yellow: `#eab308` (warnings)
+**Never invented colors.** Use only these 10 tokens. No purple gradient backgrounds.
 
 **Typography:**
 
-Font Family: Inter (Google Fonts)
+| Use | Family | Weight | Size | Notes |
+|---|---|---|---|---|
+| Display / H1 | DM Serif Display | 400 only | 72px | Letter-spacing -0.03em; **never uppercase** |
+| H2 | DM Serif Display | 400 only | 48px | Editorial colorization only at H1/display scale |
+| H3 | DM Serif Display | 400 only | 36px | — |
+| H4 | Geist | 600 | 24px | — |
+| Body | Geist | 400 | 16px | Line-height 1.65; Ink `#0F172A` on Ghost |
+| Small / UI | Geist | 500 | 14px | Min body copy size in app UI |
+| Label | Geist | 600 | 12px | UPPERCASE, letter-spacing 0.08em |
 
-Scale:
-- Display: 72px / 4.5rem / font-black
-- H1: 60px / 3.75rem / font-black
-- H2: 48px / 3rem / font-bold
-- H3: 36px / 2.25rem / font-bold
-- H4: 24px / 1.5rem / font-semibold
-- Body: 16px / 1rem / font-normal
-- Small: 14px / 0.875rem / font-medium
+> **NEVER** use Inter, Roboto, or any other font family. Inter is the default font of generic SaaS and is antithetical to Magpie's design point of view.
+> **NEVER** animate font-size or letter-spacing on scroll — causes CLS and is perceptually jarring.
+
+**Editorial Colorization Rule:** Exactly one word per display/H1 headline rendered in Current `#17C9D4` (on dark backgrounds) or Magpie Blue `#2462EA` (on light backgrounds). Never apply this technique to H2 or smaller headings.
 
 **Spacing:**
 
-Base unit: 4px (Tailwind default)
+Base unit: **8px** (all spacing values must be multiples of 8px).
 
-Common spacings:
-- xs: 8px (2 units)
-- sm: 12px (3 units)
-- md: 16px (4 units)
-- lg: 24px (6 units)
-- xl: 32px (8 units)
-- 2xl: 48px (12 units)
+| Name | Value |
+|---|---|
+| xs | 8px |
+| sm | 16px |
+| md | 24px |
+| lg | 32px |
+| xl | 48px |
+| 2xl | 64px |
+
+Standard card internal padding: 24px.
 
 **Shadows:**
 
 ```css
-sm: 0 1px 2px rgba(0, 0, 0, 0.05)
-md: 0 4px 6px rgba(0, 0, 0, 0.07)
-lg: 0 10px 15px rgba(0, 0, 0, 0.1)
-xl: 0 20px 25px rgba(0, 0, 0, 0.15)
+card: 0 8px 32px rgba(15, 23, 42, 0.08)   /* Scholarship cards, content cards */
+sm:   0 1px 2px rgba(0, 0, 0, 0.05)
+md:   0 4px 6px rgba(0, 0, 0, 0.07)
 ```
 
 **Border Radius:**
 
-- sm: 4px
-- md: 8px
-- lg: 12px
-- xl: 16px
-- 2xl: 24px
-- full: 9999px (pills)
+| Name | Value |
+|---|---|
+| sm | 8px (minimum — never below 8px) |
+| md | 12px |
+| lg | 16px (scholarship cards) |
+| xl | 24px |
+| full | 9999px (pill — all buttons, badges) |
+
+> Magpie's visual language is rounded, not sharp. Border-radius below 8px is never used.
+
+**Buttons:**
+
+- **Primary CTA:** Background Magpie Blue `#2462EA`, white text, border-radius 9999px, padding 16px/32px. Never use "submit" — outcome-oriented labels only: "Find My Scholarships", "I Applied", "Save Essay".
+- **Secondary:** Transparent, Deep `#023E8A` border and text, border-radius 9999px.
+- **Focus rings:** 3px offset, Current `#17C9D4` — applied universally to all focusable elements.
+- Never use Wing `#4A7FD4` as a CTA button background.
+- Never place Magpie Blue CTA on a Deep `#023E8A` background — use on Abyss or Ghost backgrounds only.
 
 ### 9.2 Component Library (shadcn/ui)
 
@@ -1523,20 +1567,31 @@ npx shadcn-ui@latest add tabs
 npx shadcn-ui@latest add badge
 ```
 
+**Shadcn/ui tokens must be overridden** to use the Magpie 10-token palette. Default shadcn colors (blue-600, indigo, etc.) are not used.
+
 **Custom Components:**
 
-1. **ScholarshipCard** - Swipeable card for search
-2. **EssayEditor** - Rich text editor with character count
-3. **ActivityForm** - Multi-field activity entry
-4. **ChecklistItem** - Cart item with requirements
-5. **StatCard** - Dashboard stat display
+1. **ScholarshipCard** — Swipeable card for search. border-radius 16px, shadow `0 8px 32px rgba(15,23,42,0.08)`. Never truncate content without a visible "expand" affordance. Must feel like a recommendation, not a database row.
+2. **EssayEditor** — Rich text editor with character count
+3. **ActivityForm** — Multi-field activity entry
+4. **ChecklistItem** — Cart item with requirements
+5. **StatCard** — Dashboard stat display. Won amounts displayed in Current `#17C9D4`.
+
+**Key Component Specs (from Brand Bible):**
+
+- **Scholarship cards:** border-radius 16px, shadow `0 8px 32px rgba(15,23,42,0.08)`. Never truncate without expand affordance.
+- **Toast notifications:** Dark (Ink `#0F172A` background), slide in from right, color-coded left border accent.
+- **Announcement badge:** Pill shape, Cloud `#E4EDFF` bg, Mist `#B8D0F5` border, Current `#17C9D4` dot with pulse animation.
+- **Status indicators (deadline urgency, eligibility):** Never use color alone — always pair color with an icon or text label for accessibility (WCAG requirement).
+- **Focus rings:** 3px offset, Current `#17C9D4` on all focusable elements.
 
 ### 9.3 Animation Guidelines
 
 **Motion Principles:**
-- Purposeful: Animations should guide attention, not distract
-- Snappy: Duration 200-400ms for most transitions
+- Purposeful: Animations guide attention — they do not decorate. Looping decorative animations must be ≤ 20% opacity.
+- Snappy: Duration 200–400ms for most transitions
 - Natural: Use easing functions (ease-in-out, ease-out)
+- No font-size or letter-spacing animations on scroll (causes CLS and is perceptually jarring)
 
 **Framer Motion Patterns:**
 
@@ -1584,11 +1639,12 @@ npx shadcn-ui@latest add badge
 - Color contrast ratio ≥ 4.5:1 for body text
 - Color contrast ratio ≥ 3:1 for large text (18pt+)
 - All interactive elements keyboard accessible
-- Focus indicators visible on all focusable elements
+- **Focus indicators:** 3px offset ring, Current `#17C9D4` — applied to all focusable elements universally
 - Alt text for all images
 - Semantic HTML (headings hierarchy, landmarks)
 - Form labels associated with inputs
-- Error messages descriptive and accessible
+- Error messages descriptive and solution-oriented (never show error state without a clear next action)
+- **Status indicators** (deadline urgency, eligibility, won/lost): never use color alone — always pair with icon or text label
 
 **Screen Reader Support:**
 - ARIA labels where needed
@@ -1607,7 +1663,20 @@ npx shadcn-ui@latest add badge
 
 **Status:** Phase 2 (Post-MVP)
 
-**Purpose:** Auto-fill scholarship forms on external websites
+**Purpose:** Auto-fill scholarship forms on external websites; surface relevant Knowledge Base essays in-context while a student is filling out an application.
+
+### 10.0 Strategic Context (from Market Research)
+
+The browser extension is Magpie's single most defensible product feature and its most powerful retention mechanism. ScholarshipOwl's auto-apply feature — the closest competitor — is limited to scholarships within its own ecosystem. Magpie's extension extends the autofill and copilot experience to **any** scholarship portal on the web, creating a decisive competitive advantage.
+
+The closest product analog is **Cluely** — a persistent, context-aware AI overlay that surfaces relevant information in real time while a user completes a task. Magpie's extension is structurally identical in concept: a side panel that watches the scholarship form the student is filling out and intelligently surfaces their profile data and their pre-written essays from the Knowledge Base, matched to the current prompt.
+
+**Why the extension is the GTM moat:**
+- Once installed, switching cost becomes very high — the extension accumulates application history and profile data that grows more valuable over time
+- Students who use the extension on a scholarship portal passively demonstrate the product to anyone watching (classmate, sibling, parent) — a viral in-context demo loop
+- The extension creates the natural upgrade path to a premium tier (more intelligent essay matching, richer autofill coverage)
+
+**The essay match feature is the killer differentiator.** Students' biggest essay complaint is not writing essays — it's identifying which of their existing essays can be adapted for a new prompt. The extension reads the essay prompt on the page and surfaces the closest-matching essay from the student's Knowledge Base, ranked by semantic similarity. This is directly responsive to the most common user complaint found in research: "I've typed 'describe a challenge you've overcome' 47 times."
 
 **Architecture:**
 
@@ -1701,31 +1770,70 @@ const fieldPatterns = {
 
 - Slides in from right side
 - 320px width
-- Dark overlay on rest of page
-- Non-intrusive until activated
+- Non-intrusive until activated — does not block page content
+- Brand palette: Ink `#0F172A` panel background (dark), Magpie Blue `#2462EA` for CTAs, Wing `#4A7FD4` for secondary labels, Mist `#B8D0F5` for dividers
+- DM Serif Display for panel header, Geist for all body/label text
+- All border-radius ≥ 8px; inner cards at 12px
+- Never auto-submit forms — user must explicitly click "Autofill Form"
 
-**Contents:**
+**Contents (Standard State — Form Detected):**
 
 ```
 ┌────────────────────────┐
-│ 🎓 Magpie             │
-├────────────────────────┤
-│ We detected a form!    │
+│ Magpie                 │  ← DM Serif Display, Ghost text
+│ ─────────────────────  │  ← Mist divider
+│ Form detected ●        │  ← Current dot, Wing label
 │                        │
 │ We can fill:           │
 │ ✓ Name                 │
 │ ✓ Email                │
 │ ✓ GPA                  │
-│ ✓ Essay (500w)         │
+│ ✓ School               │
+│ ✓ Essay (500w)  ★ Match│  ← ★ = KB essay matched
 │                        │
-│ [Autofill Form]        │
+│ [Fill Form]            │  ← Magpie Blue pill button
 │                        │
-│ Your Knowledge Base:   │
+│ ─── Your Essays ─────  │
 │ ┌────────────────────┐ │
-│ │ Leadership Essay   │ │
-│ │ 500 words          │ │
-│ │ [Copy]             │ │
+│ │ Leadership (500w)  │ │  ← Best KB match surfaced
+│ │ ★ Best match       │ │
+│ │ [Copy]  [Preview]  │ │
 │ └────────────────────┘ │
+│ ┌────────────────────┐ │
+│ │ Challenge (650w)   │ │  ← Second match
+│ │ [Copy]  [Preview]  │ │
+│ └────────────────────┘ │
+│                        │
+│ [Open Magpie →]        │  ← Wing text link
+└────────────────────────┘
+```
+
+**Essay Matching Logic:**
+
+When the extension detects an essay textarea on the page:
+1. Extract the essay prompt text from the form label / adjacent context
+2. Send prompt text to Magpie API (`POST /api/extension/match-essay`)
+3. API compares prompt to user's KB essay topics/tags using Claude Haiku (same model as extraction pipeline)
+4. Returns essays ranked by match confidence
+5. Surface top 2 matches in side panel, sorted by word-count proximity to the field's `maxLength` attribute
+
+This is the "Cluely for scholarships" moment — instead of a student hunting through their Knowledge Base manually, the relevant essay appears contextually, ready to copy. The student reviews, copies, pastes, and moves on in seconds.
+
+**Contents (Idle State — No Form Detected):**
+
+```
+┌────────────────────────┐
+│ Magpie                 │
+│ ─────────────────────  │
+│ No form detected       │
+│                        │
+│ Browsing a scholarship?│
+│ We'll detect the form  │
+│ and offer to help.     │
+│                        │
+│ ─── Quick Access ────  │
+│ 5 in cart | 3 applied  │
+│ [Open Dashboard →]     │
 └────────────────────────┘
 ```
 
@@ -1757,6 +1865,18 @@ const fieldPatterns = {
 }
 ```
 
+**Essay Match API:**
+
+The extension calls a lightweight API endpoint to power contextual essay matching:
+
+```
+POST /api/extension/match-essay
+Body: { promptText: string, userId: string }
+Returns: [{ essayId, topic, wordCount, matchScore, preview }]
+```
+
+Claude Haiku reads the detected essay prompt and ranks the user's KB essays by relevance. Response must be < 800ms to feel instantaneous in the panel. Results are cached client-side per prompt string.
+
 ### 10.5 Autofill Execution
 
 **Process:**
@@ -1778,8 +1898,8 @@ function autofillField(element, value) {
   element.dispatchEvent(new Event('input', { bubbles: true }));
   element.dispatchEvent(new Event('change', { bubbles: true }));
   
-  // Visual feedback
-  element.style.backgroundColor = '#dcfce7'; // light green
+  // Visual feedback — Cloud tint (#E4EDFF) aligns with Magpie palette
+  element.style.backgroundColor = '#E4EDFF';
   setTimeout(() => {
     element.style.backgroundColor = '';
   }, 1000);
@@ -1823,6 +1943,8 @@ function autofillField(element, value) {
 - Average scholarships added to cart per user (target: >5)
 - Average scholarships applied to per user (target: >3)
 - Knowledge base usage (% of users with >1 essay saved)
+- Extension install rate (Phase 2 target: >40% of active users)
+- Extension essay-match usage rate (% of extension sessions where KB essay was surfaced and copied)
 
 **Retention:**
 - D1, D7, D30 retention
@@ -2012,32 +2134,57 @@ function autofillField(element, value) {
 
 ### Post-MVP Features (Phase 2)
 
-**Chrome Extension:**
-- Auto-fill scholarship forms
-- Cluely-style side panel
-- Smart field detection
+**Chrome Extension (Priority 1 — GTM Moat):**
+- Cluely-style side panel autofill on any external scholarship portal
+- Contextual essay matching: surface KB essays ranked by relevance to the detected prompt
+- Smart field detection across diverse scholarship form implementations
+- Retention mechanism: extension data accumulates application history, making Magpie increasingly difficult to replace
+- GTM viral loop: extension use passively demonstrates the product to anyone watching the student apply
 
 **Enhanced Discovery:**
-- AI-powered matching (not just filters)
-- Personalized recommendations
-- Email alerts for new scholarships
+- AI-powered matching (beyond filters — personalized ranking by profile fit)
+- Email alerts for new local scholarships matching the student's profile
+- Geographic expansion from county → state → national
 
 **Social Features:**
-- Share scholarships with friends
-- Group applications (study groups)
-- Leaderboards (gamification)
+- Share specific scholarships with friends / family
+- Study group applications
+- Leaderboards (optional gamification — implement carefully; avoid making students feel inadequate)
 
-**Premium Features:**
-- Essay editing service
-- Resume builder
-- Interview prep
-- Premium support
+**Premium Features (Freemium Tier):**
+- Essay editing and adaptation suggestions (Haiku reads essay + prompt → suggests edits)
+- Interview prep resources
+- Premium support and account manager
+- Target $10–$20/month; 5–10% conversion from free base = $5–10M ARR potential at 100K users
+
+### B2B / Institutional Track (Phase 3)
+
+**Guidance Counselor Partnerships:**
+Market research confirms that high school guidance counselors are the single most trusted source of scholarship advice for students and parents. Counselors are actively looking for tools to supplement their capacity. A free institutional tier — giving counselors access to Magpie's scholarship database for their students — creates a powerful, low-cost distribution channel that is very difficult for competitors to replicate.
+- Offer free institutional access for counselors; track counselor-referred users separately
+- Provide training resources, scholarship curated lists by geographic region, and counselor-specific reporting (how many of my students have applied, amounts won)
+- Path to B2B revenue: charge districts for premium counselor dashboard features
+
+**Student Ambassador Program:**
+- Recruit passionate students to promote Magpie at high schools and on college campuses
+- Incentivize with free premium access, merchandise, and referral bonuses
+- Design as aspirational and community-oriented — not just a referral scheme
+- This is one of the most effective distribution channels for consumer apps targeting high school / college-aged students
+
+**B2B Scholarship Administration:**
+- Charge community foundations, regional businesses, and companies to run scholarship campaigns on the Magpie platform
+- Revenue model analogous to Bold.org's donor tools, but anchored to Magpie's verified local student base
+- The student user base becomes the social proof that attracts B2B partners
+
+### Acquisition Context
+
+The acquisition of Scholly by Sallie Mae (2023) is the most important recent market signal. It demonstrates that large financial institutions (banks, insurance companies, financial planning firms) view scholarship platforms as a strategic asset for acquiring student customers. This creates a potential acquisition path for Magpie. Target acquirers would include financial institutions, student loan servicers, or large edtech platforms (PowerSchool, Naviance's parent) seeking a student-facing scholarship product.
 
 ### Scaling Considerations
 
 **Technical Scaling:**
 - Split monolith into microservices
-- Add Redis cache layer
+- Add Redis cache layer (especially for scholarship search ranking)
 - CDN for static assets
 - Database read replicas
 
@@ -2048,14 +2195,14 @@ function autofillField(element, value) {
 
 **Data Partnerships:**
 - Integrate with Common App API (if available)
-- Partner with high schools (Naviance, Scoir)
+- Partner with high schools (Naviance, Scoir) — B2B distribution channel
 - Scholarship provider partnerships
 
 **Monetization:**
-- Freemium model (basic free, premium $5/mo)
-- B2B (sell to high schools)
-- Scholarship provider leads
-- Native advertising (ethical)
+- Freemium model (basic free, premium $10–$20/mo)
+- B2B school district sales
+- B2B scholarship administration (companies/foundations)
+- **Never** data selling — this is a core brand promise and the primary source of competitor trust deficits
 
 ---
 
@@ -2096,6 +2243,7 @@ function autofillField(element, value) {
 | `/api/admin/pending/:id/approve` | POST | Approve extracted scholarship → moves to live table |
 | `/api/admin/pending/:id/reject` | POST | Reject extracted scholarship |
 | `/api/cart` | GET/POST/DELETE | Manage cart |
+| `/api/extension/match-essay` | POST | Match detected essay prompt to user's KB essays via Haiku |
 | `/api/cart/export` | GET | Export cart to CSV |
 | `/api/webhooks/clerk` | POST | Clerk user creation webhook |
 
@@ -2136,6 +2284,7 @@ function autofillField(element, value) {
 | 1.2 | 2026-02-20 | Engineering Team | Replaced Tavily with Gemini Flash 2.0 + Google Search grounding for URL discovery; Haiku retained for page extraction; added third risk row for grounding URL quality; updated tech stack table, Phase 4 goals, pipeline flow diagram, and API endpoint description |
 | 1.3 | 2026-02-20 | Engineering Team | Gemini discovery input expanded to full student profile (ethnicity, gender, first_generation, agi_range, athletics, ECs, graduation year — not just city/state/GPA); added DB client split rule (Drizzle for search/cart/joins, Supabase JWT client for profile/essays/activities where RLS must fire) |
 | 1.4 | 2026-02-20 | Engineering Team | Replaced Playwright with `fetch()` + cheerio throughout — target sites are static HTML, headless browser unnecessary; updated architecture diagram, Tier 2 description, flow diagram, Phase 4 goals/deliverables, tech stack table, API endpoint description, and risk register |
+| 1.5 | 2026-02-22 | Engineering Team | Design system overhauled to match Magpie Brand & Design Bible v1.0: replaced Inter with DM Serif Display + Geist, replaced blue/indigo/purple palette with 10-token Magpie palette, updated spacing base unit to 8px, updated card shadows and minimum border-radius, added component-specific specs (focus rings, toasts, announcement badge, scholarship cards), updated landing page section order and background color assignments; expanded Chrome Extension section with Cluely-style essay-match feature, GTM moat strategic rationale, and brand-aligned side panel design; added `/api/extension/match-essay` endpoint; enriched Future Considerations with B2B counselor partnerships, student ambassador program, B2B scholarship administration, and acquisition context from market research; fixed TOC typo; added market size data to Problem Statement |
 
 ---
 
